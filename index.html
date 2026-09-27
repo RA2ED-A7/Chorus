@@ -209,6 +209,15 @@
   #auth-resend { width:100%; margin-top:8px; background:transparent; border:1px solid var(--line); color:var(--text); font-weight:700; font-size:13.5px; padding:10px; border-radius:12px; cursor:pointer; }
   #auth-resend:hover { border-color:var(--accent); }
   #auth-resend:disabled { opacity:.6; cursor:wait; }
+
+  /* ===== USERNAME PICKER ===== */
+  #username-overlay {
+    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:rgba(5,8,15,.78); backdrop-filter:blur(10px); padding:16px;
+  }
+  #username-err { display:none; font-size:13px; color:#f87171; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); border-radius:10px; padding:8px 10px; margin-bottom:12px; }
+  #username-input { display:block; width:100%; margin-top:6px; background:var(--bg-mid); border:1px solid var(--line); border-radius:10px; padding:10px 12px; color:var(--text); outline:none; font-size:14px; }
+  #username-input:focus { border-color:var(--accent); }
   .auth-hint { margin-top:12px; font-size:12px; color:var(--muted); text-align:center; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -390,6 +399,20 @@
       <button id="auth-resend" type="button" style="display:none" onclick="resendConfirm()">Resend confirmation email</button>
     </form>
     <div class="auth-hint">Use a real email — we'll send you a confirmation link. Powered by Supabase.</div>
+  </div>
+</div>
+
+<!-- USERNAME PICKER (shown once per account, right after sign-in) -->
+<div id="username-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">C</div>
+    <h2>Choose your username</h2>
+    <p class="auth-sub">This is the name everyone sees in Chorus. 3–20 characters, letters, numbers, underscores.</p>
+    <form onsubmit="saveUsername(event)">
+      <label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:12px">Username<input id="username-input" maxlength="20" placeholder="e.g. nova_fan" autocomplete="username" /></label>
+      <div id="username-err"></div>
+      <button id="username-submit" class="add-btn" style="width:100%" type="submit">Save username</button>
+    </form>
   </div>
 </div>
 
@@ -643,7 +666,7 @@ async function handleAuth(e) {
         showAuthOk('Account created — welcome! No confirmation needed on this project.');
       } else {
         pendingConfirmEmail = email;
-        showAuthOk('Account created! We sent a confirmation link to ' + email + '. Open it, then come back and log in.', true);
+        showAuthOk('Account created! We sent a confirmation link to ' + email + '. Click it and you will land straight inside Chorus — no need to log in again.', true);
       }
     } else {
       const { error } = await supa.auth.signInWithPassword({ email, password });
@@ -682,43 +705,78 @@ async function resendConfirm() {
     btn.disabled = false;
   }
 }
-// Handles the ?code= callback after the user clicks the email link.
+// Handles the email-link callback (?token_hash= or ?code=) and logs the user
+// straight into the app — no need to type credentials again.
 async function handleEmailLink() {
+  let handled = false;
   try {
     const url = new URL(window.location.href);
     const errDesc = url.searchParams.get('error_description') || url.searchParams.get('error');
     if (errDesc) {
       setAuthMode('login');
-      showAuthErr('Confirmation link problem: ' + errDesc + ' — try resending.');
+      showAuthErr('Confirmation link problem: ' + errDesc + ' — try resending.', true);
       return true;
     }
+    if (!supa) return false;
+    // 1) PKCE code exchange (?code=...)
     const code = url.searchParams.get('code');
-    if (code && supa) {
+    if (code) {
+      handled = true;
       const { error } = await supa.auth.exchangeCodeForSession(code);
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '') + url.hash);
+      cleanAuthParams(url, ['code']);
       if (error) {
         setAuthMode('login');
         showAuthErr('This confirmation link expired or was already used. Log in or resend a fresh one.', true);
       } else {
-        showAuthOk('Email confirmed — you are in!');
+        // Session is now stored — refresh UI straight into the app.
+        const { data } = await supa.auth.getSession();
+        setUser(data.session?.user || null);
       }
       return true;
     }
+    // 2) Email confirmation / recovery links (?token_hash=...&type=...)
+    const token_hash = url.searchParams.get('token_hash');
+    const type = url.searchParams.get('type') || 'signup';
+    if (token_hash) {
+      handled = true;
+      const valid = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'];
+      const { error } = await supa.auth.verifyOtp({ token_hash, type: valid.includes(type) ? type : 'signup' });
+      cleanAuthParams(url, ['token_hash', 'type']);
+      if (error) {
+        setAuthMode('login');
+        showAuthErr('This confirmation link expired or was already used. Log in or resend a fresh one.', true);
+      } else {
+        const { data } = await supa.auth.getSession();
+        setUser(data.session?.user || null);
+      }
+      return true;
+    }
+    // 3) Implicit-flow fallback (#access_token=...) — supabase-js picks up the
+    // session automatically; just clean the URL.
     if (window.location.hash.includes('access_token')) {
-      // Implicit flow fallback: supabase-js picks up the session automatically.
       window.history.replaceState({}, '', url.pathname + url.search);
-      showAuthOk('Email confirmed — you are in!');
+      const { data } = await supa.auth.getSession();
+      setUser(data.session?.user || null);
       return true;
     }
   } catch(e) { console.error('email link handling failed', e); }
-  return false;
+  return handled;
+}
+function cleanAuthParams(url, keys) {
+  keys.forEach(k => url.searchParams.delete(k));
+  const qs = url.searchParams.toString();
+  window.history.replaceState({}, '', url.pathname + (qs ? '?' + qs : '') + (url.hash.includes('access_token') ? '' : url.hash));
+}
+function usernameOf(user) {
+  return (user && user.user_metadata && user.user_metadata.username) || '';
 }
 function setUser(user) {
   currentUser = user || null;
   const overlay = document.getElementById('auth-overlay');
+  const upick = document.getElementById('username-overlay');
   if (!user) {
     overlay.style.display = 'flex';
+    if (upick) upick.style.display = 'none';
     document.getElementById('me-avatar').textContent = '?';
     document.getElementById('me-name').textContent = 'Guest';
     document.getElementById('me-email').textContent = '● logged out';
@@ -726,14 +784,57 @@ function setUser(user) {
   }
   overlay.style.display = 'none';
   const email = user.email || 'user';
-  const name = email.split('@')[0];
+  const name = usernameOf(user) || email.split('@')[0];
   document.getElementById('me-avatar').textContent = (name[0] || 'U').toUpperCase();
   document.getElementById('me-name').textContent = name;
   document.getElementById('me-name').title = email;
   document.getElementById('me-email').textContent = '● online';
+  // First sign-in has no username yet — ask for it now.
+  if (!usernameOf(user) && upick) {
+    document.getElementById('username-input').value = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 20);
+    document.getElementById('username-err').style.display = 'none';
+    upick.style.display = 'flex';
+    setTimeout(() => document.getElementById('username-input').focus(), 50);
+  } else if (upick) {
+    upick.style.display = 'none';
+  }
+}
+async function saveUsername(e) {
+  if (e) e.preventDefault();
+  const errEl = document.getElementById('username-err');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('username-submit');
+  let name = document.getElementById('username-input').value.trim();
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(name)) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Use 3–20 characters: letters, numbers, underscores only.';
+    return;
+  }
+  if (!supa || !currentUser) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Not signed in — log in first.';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const { data, error } = await supa.auth.updateUser({ data: { username: name } });
+    if (error) throw error;
+    const user = (data && data.user) || (await supa.auth.getUser()).data.user;
+    setUser(user || currentUser);
+    document.getElementById('username-overlay').style.display = 'none';
+  } catch (err) {
+    errEl.style.display = 'block';
+    errEl.textContent = err.message || 'Could not save username.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save username';
+  }
 }
 async function logout() {
   try { if (supa) await supa.auth.signOut(); } catch(e) {}
+  const upick = document.getElementById('username-overlay');
+  if (upick) upick.style.display = 'none';
   setUser(null);
 }
 
