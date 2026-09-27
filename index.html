@@ -182,7 +182,33 @@
 
   ::-webkit-scrollbar { width:8px; }
   ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
+
+  /* ===== AUTH OVERLAY ===== */
+  #auth-overlay {
+    position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,8,15,.78); backdrop-filter:blur(10px); padding:16px;
+  }
+  .auth-card {
+    width:min(380px,100%); background:var(--bg-side); border:1px solid var(--line);
+    border-radius:20px; padding:28px 26px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .auth-logo { width:52px; height:52px; border-radius:14px; background:var(--accent-grad); display:grid; place-items:center; font-weight:900; font-size:24px; color:white; margin-bottom:14px; box-shadow:0 4px 20px rgba(59,130,246,.45); }
+  .auth-card h2 { font-size:20px; margin-bottom:4px; }
+  .auth-sub { color:var(--muted); font-size:13.5px; margin-bottom:16px; }
+  .auth-tabs { display:flex; background:var(--bg-mid); border:1px solid var(--line); border-radius:12px; padding:4px; gap:4px; margin-bottom:16px; }
+  .auth-tabs button { flex:1; border:none; background:transparent; color:var(--muted); font-weight:700; font-size:13.5px; padding:8px; border-radius:8px; cursor:pointer; }
+  .auth-tabs button.active { background:var(--bg-side); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  #auth-form label { display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:12px; }
+  #auth-form input { display:block; width:100%; margin-top:6px; background:var(--bg-mid); border:1px solid var(--line); border-radius:10px; padding:10px 12px; color:var(--text); outline:none; font-size:14px; font-weight:400; }
+  #auth-form input:focus { border-color:var(--accent); }
+  #auth-err { display:none; font-size:13px; color:#f87171; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); border-radius:10px; padding:8px 10px; margin-bottom:12px; }
+  #auth-ok { display:none; font-size:13px; color:#34d399; background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.3); border-radius:10px; padding:8px 10px; margin-bottom:12px; }
+  #auth-submit { width:100%; background:var(--accent-grad); border:none; color:white; font-weight:800; font-size:14.5px; padding:11px; border-radius:12px; cursor:pointer; }
+  #auth-submit:hover { filter:brightness(1.1); }
+  #auth-submit:disabled { opacity:.6; cursor:wait; }
+  .auth-hint { margin-top:12px; font-size:12px; color:var(--muted); text-align:center; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body data-scope="server">
 
@@ -244,9 +270,9 @@
     </div>
   </div>
   <div class="me">
-    <div class="avatar">Y</div>
-    <div><div style="font-size:14px;font-weight:700">a7m</div><small>● online</small></div>
-    <div class="icons"><span>🎙️</span><span>🎧</span><span>⚙️</span></div>
+    <div class="avatar" id="me-avatar">?</div>
+    <div style="min-width:0"><div id="me-name" style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">…</div><small id="me-email">● connecting…</small></div>
+    <div class="icons"><span title="Log out" onclick="logout()">⏻</span></div>
   </div>
 </div>
 
@@ -342,7 +368,35 @@
   <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#334155">J</div><div class="status off"></div></div><span>Juno</span></div>
 </div>
 
+<!-- AUTH -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">C</div>
+    <h2>Welcome to Chorus</h2>
+    <p class="auth-sub">Find your voice — sign in to continue</p>
+    <div class="auth-tabs">
+      <button id="tab-login" class="active" type="button" onclick="setAuthMode('login')">Log in</button>
+      <button id="tab-signup" type="button" onclick="setAuthMode('signup')">Sign up</button>
+    </div>
+    <form id="auth-form" onsubmit="handleAuth(event)">
+      <label>Email<input id="auth-email" type="email" required placeholder="you@example.com" autocomplete="email" /></label>
+      <label>Password<input id="auth-pass" type="password" required minlength="6" placeholder="Min. 6 characters" autocomplete="current-password" /></label>
+      <div id="auth-err"></div>
+      <div id="auth-ok"></div>
+      <button id="auth-submit" type="submit">Log in</button>
+    </form>
+    <div class="auth-hint">Email + password only. Powered by Supabase.</div>
+  </div>
+</div>
+
 <script>
+const SUPABASE_URL = 'https://tlbjqusahpngkjcmeofb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WvICVdEDq0Rz2AHaJ0CwHw_8CqjumMp';
+let supa = null;
+try { supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error('supabase init failed', e); }
+
+let authMode = 'login';
+let currentUser = null;
 let currentDM = null;
 const DM_COLORS = { Nova:'#3b82f6', Kai:'#0ea5e9', Mira:'#f59e0b', Zed:'#8b5cf6', Rook:'#64748b', Juno:'#334155' };
 const DM_HISTORY = {
@@ -433,6 +487,7 @@ function renderDM(name) {
   box.scrollTop = box.scrollHeight;
 }
 function send() {
+  if (!currentUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
   const inp = document.getElementById('input');
   if(!inp.value.trim()) return;
   // if in friends view, ignore
@@ -521,11 +576,89 @@ function addDM() {
   openDM(name, div);
 }
 
+/* ===== Supabase Auth (email + password) ===== */
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-submit').textContent = mode === 'login' ? 'Log in' : 'Sign up';
+  hideAuthMsg();
+}
+function showAuthErr(msg) {
+  const el = document.getElementById('auth-err');
+  el.style.display = 'block';
+  el.textContent = msg;
+  document.getElementById('auth-ok').style.display = 'none';
+}
+function showAuthOk(msg) {
+  const el = document.getElementById('auth-ok');
+  el.style.display = 'block';
+  el.textContent = msg;
+  document.getElementById('auth-err').style.display = 'none';
+}
+function hideAuthMsg() {
+  document.getElementById('auth-err').style.display = 'none';
+  document.getElementById('auth-ok').style.display = 'none';
+}
+async function handleAuth(e) {
+  e.preventDefault();
+  hideAuthMsg();
+  if (!supa) { showAuthErr('Auth not ready — check network / supabase-js CDN.'); return; }
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-pass').value;
+  const btn = document.getElementById('auth-submit');
+  btn.disabled = true;
+  btn.textContent = authMode === 'login' ? 'Logging in…' : 'Signing up…';
+  try {
+    if (authMode === 'signup') {
+      const { data, error } = await supa.auth.signUp({ email, password });
+      if (error) throw error;
+      if (data.session) {
+        showAuthOk('Account created — welcome!');
+      } else {
+        showAuthOk('Account created! Check your email to confirm, then Log in.');
+        setAuthMode('login');
+      }
+    } else {
+      const { error } = await supa.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+  } catch (err) {
+    showAuthErr(err.message || 'Auth failed.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Log in' : 'Sign up';
+  }
+}
+function setUser(user) {
+  currentUser = user || null;
+  const overlay = document.getElementById('auth-overlay');
+  if (!user) {
+    overlay.style.display = 'flex';
+    document.getElementById('me-avatar').textContent = '?';
+    document.getElementById('me-name').textContent = 'Guest';
+    document.getElementById('me-email').textContent = '● logged out';
+    return;
+  }
+  overlay.style.display = 'none';
+  const email = user.email || 'user';
+  const name = email.split('@')[0];
+  document.getElementById('me-avatar').textContent = (name[0] || 'U').toUpperCase();
+  document.getElementById('me-name').textContent = name;
+  document.getElementById('me-name').title = email;
+  document.getElementById('me-email').textContent = '● online';
+}
+async function logout() {
+  try { if (supa) await supa.auth.signOut(); } catch(e) {}
+  setUser(null);
+}
+
 (function init(){
-  // Default to server scope like Discord lands on last server;
-  // call showFriends() to land on home instead. Keep server default for now.
   setScope('server');
   try { localStorage.removeItem('chorus-layout'); } catch(e) {}
+  if (!supa) { setUser(null); showAuthErr('Could not load Supabase. Check internet connection.'); return; }
+  supa.auth.getSession().then(({ data }) => setUser(data.session?.user || null));
+  supa.auth.onAuthStateChange((_evt, session) => setUser(session?.user || null));
 })();
 </script>
 </body>
