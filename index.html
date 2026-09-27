@@ -179,6 +179,13 @@
   .side-panel { display:flex; flex-direction:column; flex:1; min-height:0; }
   .home-search { margin:12px 10px 4px; background:var(--bg-deep); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; color:var(--muted); cursor:text; }
   .nav-sep { height:1px; background:var(--line); margin:10px 10px 4px; }
+  .empty { padding:26px 14px; text-align:center; }
+  .empty-t { font-weight:800; font-size:15px; margin-bottom:6px; }
+  .empty-s { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  .typing { color:var(--muted); font-size:13px; padding:6px 10px; font-style:italic; }
+  .bot-tag { margin-left:auto; font-size:10px; font-weight:800; background:rgba(34,211,238,.12); color:#22d3ee; border:1px solid rgba(34,211,238,.4); padding:2px 6px; border-radius:6px; letter-spacing:.05em; }
+  .dm .bot-tag ~ .unread { margin-left:6px; }
+  #rail-servers { display:flex; flex-direction:column; gap:10px; align-items:center; }
 
   ::-webkit-scrollbar { width:8px; }
   ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
@@ -228,29 +235,16 @@
   <div class="logo" title="Chorus Home" onclick="showFriends()">C</div>
   <div class="sep"></div>
   <div class="srv home" id="rail-home" title="Friends / DMs" onclick="showFriends()">👥</div>
-  <div class="srv active" onclick="switchServer(this,'Pixel Tavern')">PT</div>
-  <div class="srv" onclick="switchServer(this,'Study Den')">SD</div>
-  <div class="srv" onclick="switchServer(this,'Movie Night')">🎬</div>
-  <div class="srv" onclick="switchServer(this,'Dev Hub')">⌨️</div>
-  <div class="srv add">+</div>
+  <div id="rail-servers"></div>
+  <div class="srv add" title="Create a server" onclick="createServer()">+</div>
 </div>
 
 <div class="channels">
   <!-- SERVER SCOPE: like Discord server view, no DMs here -->
   <div class="side-panel" id="panel-server">
-    <div class="server-head"><div id="serverName">Pixel Tavern</div><span class="badge">CHORUS+</span></div>
+    <div class="server-head"><div id="serverName">…</div><span class="badge">CHORUS+</span></div>
     <div class="chan-list">
-      <div id="server-channels">
-        <div class="cat">TEXT CHANNELS <span>+</span></div>
-        <div class="chan active" onclick="switchChannel(this,'general')">💬 general <div class="dot"></div></div>
-        <div class="chan" onclick="switchChannel(this,'clips')">📸 clips</div>
-        <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
-        <div class="cat">VOICE CHANNELS <span>+</span></div>
-        <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
-        <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
-        <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
-        <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
-      </div>
+      <div id="server-channels"><!-- rendered per account (empty for new users) --></div>
     </div>
   </div>
   <!-- HOME SCOPE: Friends + DMs only, like Discord home -->
@@ -261,24 +255,7 @@
       <div class="nav-item" onclick="addDM()"> <div class="ico">✉️</div> New DM </div>
       <div class="nav-sep"></div>
       <div class="cat">DIRECT MESSAGES <span onclick="addDM()">+</span></div>
-      <div id="dm-list">
-        <div class="dm" data-dm="Nova" onclick="openDM('Nova',this)">
-          <div class="dwrap"><div class="dava" style="background:#3b82f6">N</div><div class="dstatus on"></div></div>
-          <span>Nova</span><span class="unread">2</span>
-        </div>
-        <div class="dm" data-dm="Kai" onclick="openDM('Kai',this)">
-          <div class="dwrap"><div class="dava" style="background:#0ea5e9">K</div><div class="dstatus on"></div></div>
-          <span>Kai</span><span class="x">✕</span>
-        </div>
-        <div class="dm" data-dm="Mira" onclick="openDM('Mira',this)">
-          <div class="dwrap"><div class="dava" style="background:#f59e0b">M</div><div class="dstatus idle"></div></div>
-          <span>Mira</span><span class="x">✕</span>
-        </div>
-        <div class="dm" data-dm="Zed" onclick="openDM('Zed',this)">
-          <div class="dwrap"><div class="dava" style="background:#8b5cf6">Z</div><div class="dstatus busy"></div></div>
-          <span>Zed</span><span class="x">✕</span>
-        </div>
-      </div>
+      <div id="dm-list"><!-- rendered per account (test bot only for new users) --></div>
     </div>
   </div>
   <div class="me">
@@ -297,20 +274,7 @@
 
   <!-- CHAT / DM VIEW -->
   <div id="view-chat" style="display:flex;flex-direction:column;flex:1;min-height:0">
-    <div class="messages" id="msgs">
-      <div class="msg">
-        <div class="pic" style="background:#3b82f6">N</div>
-        <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Nova</b><span>Today at 4:12 PM</span></div><p>Anyone up for ranked tonight? Need 1 more 🏆</p></div>
-      </div>
-      <div class="msg">
-        <div class="pic" style="background:#0ea5e9">K</div>
-        <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Kai</b><span>Today at 4:15 PM</span></div><p>I'm in! Just finished my setup, new mic sounds clean?</p></div>
-      </div>
-      <div class="msg own">
-        <div class="pic" style="background:var(--accent-grad)">Y</div>
-        <div class="bubble"><div class="head"><b>You</b><span>Today at 4:16 PM</span></div><p>Lets gooo, invite me when lobby opens 🔥</p></div>
-      </div>
-    </div>
+    <div class="messages" id="msgs"><!-- rendered per account --></div>
     <div class="input-wrap">
       <div class="input-bar">
         <span style="margin-right:10px;color:var(--muted)">😊</span>
@@ -332,52 +296,12 @@
       <input class="fsearch" id="fsearch" placeholder="Search friends" oninput="searchFriends()" />
       <button class="add-btn" onclick="addFriend()">+ Add Friend</button>
     </div>
-    <div id="friends-list">
-      <h4>ONLINE — 4</h4>
-      <div class="friend-row" data-name="nova" data-group="online">
-        <div class="wrap"><div class="ava" style="background:#3b82f6">N</div><div class="status on"></div></div>
-        <div><div class="fname">Nova</div><div class="fsub">Playing Ranked • online</div></div>
-        <div class="acts"><button class="icon-btn primary" title="Message" onclick="openDM('Nova')">💬</button><button class="icon-btn" title="Call">📞</button><button class="icon-btn" title="More">⋯</button></div>
-      </div>
-      <div class="friend-row" data-name="kai" data-group="online" style="margin-top:8px">
-        <div class="wrap"><div class="ava" style="background:#0ea5e9">K</div><div class="status on"></div></div>
-        <div><div class="fname">Kai</div><div class="fsub">online</div></div>
-        <div class="acts"><button class="icon-btn primary" onclick="openDM('Kai')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
-      </div>
-      <div class="friend-row" data-name="mira" data-group="online" style="margin-top:8px">
-        <div class="wrap"><div class="ava" style="background:#f59e0b">M</div><div class="status idle"></div></div>
-        <div><div class="fname">Mira</div><div class="fsub">idle • AFK</div></div>
-        <div class="acts"><button class="icon-btn primary" onclick="openDM('Mira')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
-      </div>
-      <div class="friend-row" data-name="zed" data-group="online" style="margin-top:8px">
-        <div class="wrap"><div class="ava" style="background:#8b5cf6">Z</div><div class="status busy"></div></div>
-        <div><div class="fname">Zed</div><div class="fsub">Do not disturb</div></div>
-        <div class="acts"><button class="icon-btn primary" onclick="openDM('Zed')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
-      </div>
-      <h4 style="margin-top:14px">OFFLINE — 2</h4>
-      <div class="friend-row" data-name="rook" data-group="all" style="opacity:.75">
-        <div class="wrap"><div class="ava" style="background:#64748b">R</div><div class="status off"></div></div>
-        <div><div class="fname">Rook</div><div class="fsub">offline • last seen yesterday</div></div>
-        <div class="acts"><button class="icon-btn primary" onclick="openDM('Rook')">💬</button><button class="icon-btn">⋯</button></div>
-      </div>
-      <div class="friend-row" data-name="juno" data-group="all" style="opacity:.75;margin-top:8px">
-        <div class="wrap"><div class="ava" style="background:#334155">J</div><div class="status off"></div></div>
-        <div><div class="fname">Juno</div><div class="fsub">offline</div></div>
-        <div class="acts"><button class="icon-btn primary" onclick="openDM('Juno')">💬</button><button class="icon-btn">⋯</button></div>
-      </div>
-    </div>
+    <div id="friends-list"><!-- rendered per account (empty for new users) --></div>
   </div>
 </div>
 
 <div class="members">
-  <h4>ONLINE — 4</h4>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#3b82f6">N</div><div class="status on"></div></div><span>Nova</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#0ea5e9">K</div><div class="status on"></div></div><span>Kai</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#f59e0b">M</div><div class="status idle"></div></div><span>Mira</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#8b5cf6">Z</div><div class="status busy"></div></div><span>Zed</span></div>
-  <h4>OFFLINE — 2</h4>
-  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#64748b">R</div><div class="status off"></div></div><span>Rook</span></div>
-  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#334155">J</div><div class="status off"></div></div><span>Juno</span></div>
+  <div id="members-list"><!-- rendered from active server --></div>
 </div>
 
 <!-- AUTH -->
@@ -429,14 +353,86 @@ let pendingConfirmEmail = '';
 
 let authMode = 'login';
 let currentUser = null;
-let currentDM = null;
-const DM_COLORS = { Nova:'#3b82f6', Kai:'#0ea5e9', Mira:'#f59e0b', Zed:'#8b5cf6', Rook:'#64748b', Juno:'#334155' };
-const DM_HISTORY = {
-  Nova: [{from:'Nova', text:'yo, ranked at 9?', time:'Today at 3:40 PM'}, {from:'You', text:'yep, I\'m down — same lobby?', time:'Today at 3:42 PM'}],
-  Kai: [{from:'Kai', text:'check this clip 😂', time:'Yesterday at 8:12 PM'}],
-  Mira: [{from:'Mira', text:'study session tomorrow?', time:'Yesterday at 6:00 PM'}],
-  Zed: [{from:'Zed', text:'movie night Friday, you in?', time:'Monday at 12:01 PM'}]
-};
+let currentDM = null; // active DM name (home scope)
+let currentServerId = null;
+let currentChannel = 'general';
+let store = null; // per-account: {servers, dms, friends, msgs, active}
+let bootedFor = null;
+
+/* ===== Per-account store (new accounts start EMPTY) + Test Bot ===== */
+const BOT_NAME = 'Chorus Bot';
+const BOT_COLOR = '#22d3ee';
+const PALETTE = ['#3b82f6','#0ea5e9','#8b5cf6','#f59e0b','#10b981','#ef4444','#ec4899','#64748b'];
+function colorFor(name) {
+  let h = 0; const s = String(name || '?');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+}
+function uid(p) { return (p || 'id') + '_' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+function initials(name) {
+  const p = String(name || '?').trim().split(/\s+/);
+  return ((p[0] && p[0][0]) || '?').toUpperCase() + (p.length > 1 ? (p[p.length - 1][0] || '').toUpperCase() : '');
+}
+function nowStamp() {
+  const d = new Date(); let h = d.getHours(); const m = ('0' + d.getMinutes()).slice(-2);
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  return 'Today at ' + h + ':' + m + ' ' + ap;
+}
+function displayName() {
+  if (currentUser && currentUser.user_metadata && currentUser.user_metadata.username) return currentUser.user_metadata.username;
+  if (currentUser && currentUser.email) return currentUser.email.split('@')[0];
+  return 'you';
+}
+function storeKey() { return 'chorus-data-' + (currentUser && currentUser.id ? currentUser.id : 'guest'); }
+function blankStore() { return { servers: [], dms: [], friends: [], msgs: {}, active: { serverId: null, channel: 'general', dm: null } }; }
+function dmKey(name) { return 'dm:' + String(name).toLowerCase(); }
+function srvKey(id, ch) { return 'srv:' + id + ':' + ch; }
+function activeServer() { return store ? (store.servers.find(s => s.id === currentServerId) || null) : null; }
+function guardAuth() {
+  if (!currentUser) { document.getElementById('auth-overlay').style.display = 'flex'; return false; }
+  if (!store) loadStore();
+  return true;
+}
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(storeKey());
+    store = raw ? Object.assign(blankStore(), JSON.parse(raw)) : blankStore();
+  } catch (e) { store = blankStore(); }
+  if (!Array.isArray(store.servers)) store.servers = [];
+  if (!Array.isArray(store.dms)) store.dms = [];
+  if (!Array.isArray(store.friends)) store.friends = [];
+  if (!store.msgs || typeof store.msgs !== 'object') store.msgs = {};
+  ensureBot();
+  currentServerId = store.active && store.active.serverId;
+  currentChannel = (store.active && store.active.channel) || 'general';
+  currentDM = (store.active && store.active.dm) || null;
+  if (currentServerId && !store.servers.find(s => s.id === currentServerId)) { currentServerId = null; currentDM = null; }
+  saveStore();
+}
+function saveStore() {
+  if (!store) return;
+  store.active = { serverId: currentServerId, channel: currentChannel, dm: currentDM };
+  try { localStorage.setItem(storeKey(), JSON.stringify(store)); } catch (e) {}
+}
+function ensureBot() {
+  if (!store.dms.find(d => d.name === BOT_NAME)) {
+    store.dms.unshift({ name: BOT_NAME, color: BOT_COLOR, bot: true, status: 'on', unread: 1 });
+  }
+  const k = dmKey(BOT_NAME);
+  if (!store.msgs[k] || !store.msgs[k].length) {
+    store.msgs[k] = [{ from: BOT_NAME, color: BOT_COLOR, text: 'Hey ' + displayName() + '! I\'m ' + BOT_NAME + ' 🤖 — your built-in test buddy. Send me anything and I\'ll answer instantly. Try "help".', time: 'Today' }];
+  }
+}
+function ensureDM(name) {
+  name = String(name).slice(0, 20);
+  let d = store.dms.find(x => x.name.toLowerCase() === name.toLowerCase());
+  if (!d) {
+    d = { name, color: colorFor(name), status: 'on', unread: 0 };
+    store.dms.push(d);
+    if (!store.msgs[dmKey(name)]) store.msgs[dmKey(name)] = [];
+  }
+  return d;
+}
 
 function setScope(scope) {
   document.body.dataset.scope = scope;
@@ -457,101 +453,351 @@ function showView(which) {
   document.getElementById('view-chat').style.display = which === 'chat' ? 'flex' : 'none';
   document.getElementById('view-friends').style.display = which === 'friends' ? 'flex' : 'none';
 }
-function switchServer(el, name) {
-  clearRail(); clearServerActive(); clearDMActive();
-  el.classList.add('active');
-  document.getElementById('serverName').textContent = name;
-  const first = document.querySelector('#server-channels .chan');
-  if (first) { first.classList.add('active'); const dot = document.createElement('div'); dot.className='dot'; first.appendChild(dot); }
-  currentDM = null;
-  setScope('server');
-  document.getElementById('chat-ico').textContent = '#';
-  document.getElementById('chanName').textContent = 'general';
-  document.getElementById('chat-topic').textContent = 'Welcome to ' + name + ' — every voice matters';
-  document.getElementById('input').placeholder = 'Message #general';
-  showView('chat');
+/* ===== Render (everything comes from the per-account store) ===== */
+function renderAll() {
+  if (!store) return;
+  renderRail(); renderServerPanel(); renderDMs(); renderFriends(); renderMembers(); renderChat();
 }
-function switchChannel(el, name) {
-  clearServerActive(); clearDMActive();
-  el.classList.add('active');
-  const dot = document.createElement('div'); dot.className='dot'; el.appendChild(dot);
-  currentDM = null;
-  setScope('server');
-  document.getElementById('chat-ico').textContent = '#';
-  document.getElementById('chanName').textContent = name;
-  document.getElementById('chat-topic').textContent = 'Welcome to #' + name;
-  document.getElementById('input').placeholder = 'Message #' + name;
-  showView('chat');
+function renderRail() {
+  const wrap = document.getElementById('rail-servers');
+  wrap.innerHTML = '';
+  store.servers.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'srv' + (s.id === currentServerId ? ' active' : '');
+    d.title = s.name;
+    d.textContent = initials(s.name);
+    d.onclick = () => switchServerById(s.id);
+    wrap.appendChild(d);
+  });
+  document.getElementById('rail-home').classList.toggle('active', document.body.dataset.scope === 'home');
 }
-function openDM(name, el) {
-  clearServerActive(); clearDMActive();
-  if (el) { el.classList.add('active'); const u = el.querySelector('.unread'); if (u) u.remove(); }
-  else { const item = document.querySelector(`.dm[data-dm="${name}"]`); if (item) { item.classList.add('active'); const u=item.querySelector('.unread'); if(u) u.remove(); } }
-  clearRail();
-  document.getElementById('rail-home').classList.add('active');
-  currentDM = name;
-  setScope('home');
-  document.getElementById('nav-friends').classList.remove('active');
-  document.getElementById('chat-ico').textContent = '@';
-  document.getElementById('chanName').textContent = name;
-  document.getElementById('chat-topic').textContent = 'Direct message with ' + name;
-  document.getElementById('input').placeholder = 'Message @' + name;
-  renderDM(name);
-  showView('chat');
-  document.getElementById('input').focus();
+function renderServerPanel() {
+  const srv = activeServer();
+  document.getElementById('serverName').textContent = srv ? srv.name : 'No server';
+  const box = document.getElementById('server-channels');
+  box.innerHTML = '';
+  if (!srv) {
+    const e = document.createElement('div');
+    e.className = 'empty';
+    const t = document.createElement('div'); t.className = 'empty-t'; t.textContent = 'No servers yet';
+    const s = document.createElement('div'); s.className = 'empty-s'; s.textContent = 'Create your first server to start chatting.';
+    const b = document.createElement('button'); b.className = 'add-btn'; b.textContent = '+ Create server'; b.onclick = createServer;
+    e.append(t, s, b);
+    box.appendChild(e);
+    return;
+  }
+  const cat = document.createElement('div'); cat.className = 'cat';
+  const lbl = document.createElement('span'); lbl.textContent = 'TEXT CHANNELS';
+  const plus = document.createElement('span'); plus.textContent = '+'; plus.title = 'Add channel'; plus.onclick = addChannel;
+  cat.append(lbl, plus);
+  box.appendChild(cat);
+  srv.channels.forEach(ch => {
+    const c = document.createElement('div');
+    c.className = 'chan' + (ch === currentChannel ? ' active' : '');
+    const lab = document.createElement('span'); lab.textContent = '💬 ' + ch;
+    c.appendChild(lab);
+    if (ch === currentChannel) { const dot = document.createElement('div'); dot.className = 'dot'; c.appendChild(dot); }
+    c.onclick = () => switchChannelByName(ch);
+    box.appendChild(c);
+  });
 }
-function renderDM(name) {
+function renderDMs() {
+  const list = document.getElementById('dm-list');
+  list.innerHTML = '';
+  if (!store.dms.length) {
+    const s = document.createElement('div'); s.className = 'empty-s'; s.style.padding = '4px 10px'; s.textContent = 'No DMs yet.';
+    list.appendChild(s);
+    return;
+  }
+  store.dms.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'dm' + (d.name === currentDM ? ' active' : '');
+    const w = document.createElement('div'); w.className = 'dwrap';
+    const av = document.createElement('div'); av.className = 'dava';
+    av.style.background = d.color || colorFor(d.name);
+    av.textContent = d.bot ? '🤖' : (d.name[0] || '?').toUpperCase();
+    const st = document.createElement('div'); st.className = 'dstatus ' + (d.status || 'on');
+    w.append(av, st);
+    const nm = document.createElement('span'); nm.textContent = d.name;
+    row.append(w, nm);
+    if (d.bot) { const tag = document.createElement('span'); tag.className = 'bot-tag'; tag.textContent = 'BOT'; row.appendChild(tag); }
+    if (d.unread) { const u = document.createElement('span'); u.className = 'unread'; u.textContent = d.unread > 9 ? '9+' : d.unread; row.appendChild(u); }
+    row.onclick = () => openDM(d.name);
+    list.appendChild(row);
+  });
+}
+function renderFriends() {
+  const box = document.getElementById('friends-list');
+  box.innerHTML = '';
+  const empty = document.createElement('div'); empty.id = 'friends-empty'; empty.style.display = 'none';
+  if (!store.friends.length) {
+    const e = document.createElement('div'); e.className = 'empty';
+    const t = document.createElement('div'); t.className = 'empty-t'; t.textContent = 'No friends yet';
+    const s = document.createElement('div'); s.className = 'empty-s'; s.textContent = 'Add a friend to start building your circle.';
+    const b = document.createElement('button'); b.className = 'add-btn'; b.textContent = '+ Add Friend'; b.onclick = addFriend;
+    e.append(t, s, b);
+    box.append(e, empty);
+    return;
+  }
+  const on = store.friends.filter(f => f.group === 'online');
+  const off = store.friends.filter(f => f.group !== 'online');
+  const h1 = document.createElement('h4'); h1.textContent = 'ONLINE — ' + on.length;
+  box.appendChild(h1);
+  on.forEach((f, i) => box.appendChild(friendRow(f, i === 0)));
+  const h2 = document.createElement('h4'); h2.style.marginTop = '14px'; h2.textContent = 'OFFLINE — ' + off.length;
+  box.appendChild(h2);
+  off.forEach(f => { const r = friendRow(f, false); r.style.opacity = '.75'; box.appendChild(r); });
+  box.appendChild(empty);
+}
+function friendRow(f, first) {
+  const r = document.createElement('div');
+  r.className = 'friend-row'; r.dataset.name = f.name.toLowerCase(); r.dataset.group = f.group || 'all';
+  if (!first) r.style.marginTop = '8px';
+  const wrap = document.createElement('div'); wrap.className = 'wrap';
+  const av = document.createElement('div'); av.className = 'ava'; av.style.background = f.color || colorFor(f.name); av.textContent = (f.name[0] || '?').toUpperCase();
+  const st = document.createElement('div'); st.className = 'status ' + (f.group === 'online' ? 'on' : 'off');
+  wrap.append(av, st);
+  const info = document.createElement('div');
+  const fn = document.createElement('div'); fn.className = 'fname'; fn.textContent = f.name;
+  const fs = document.createElement('div'); fs.className = 'fsub'; fs.textContent = f.sub || (f.group === 'online' ? 'online' : 'offline');
+  info.append(fn, fs);
+  const acts = document.createElement('div'); acts.className = 'acts';
+  const msg = document.createElement('button'); msg.className = 'icon-btn primary'; msg.title = 'Message'; msg.textContent = '💬'; msg.onclick = () => openDM(f.name);
+  const more = document.createElement('button'); more.className = 'icon-btn'; more.title = 'More'; more.textContent = '⋯';
+  acts.append(msg, more);
+  r.append(wrap, info, acts);
+  return r;
+}
+function renderMembers() {
+  const box = document.getElementById('members-list');
+  if (!box) return;
+  box.innerHTML = '';
+  const srv = activeServer();
+  const h = document.createElement('h4');
+  h.textContent = srv ? ('MEMBERS — ' + srv.members.length) : 'NO SERVER';
+  box.appendChild(h);
+  (srv ? srv.members : []).forEach(nm => {
+    const m = document.createElement('div'); m.className = 'member';
+    const wrap = document.createElement('div'); wrap.className = 'wrap';
+    const av = document.createElement('div'); av.className = 'ava'; av.style.background = colorFor(nm); av.textContent = (nm[0] || '?').toUpperCase();
+    const st = document.createElement('div'); st.className = 'status ' + (nm === displayName() ? 'on' : 'off');
+    wrap.append(av, st);
+    const sp = document.createElement('span'); sp.textContent = nm;
+    m.append(wrap, sp);
+    box.appendChild(m);
+  });
+}
+function renderMsgs(list) {
   const box = document.getElementById('msgs');
   box.innerHTML = '';
-  const color = DM_COLORS[name] || '#3b82f6';
-  const hist = DM_HISTORY[name] || [{from:name, text:'Hey! This is the start of your DM history.', time:'Today'}];
-  hist.forEach(m => {
+  if (!list.length) {
+    const e = document.createElement('div'); e.className = 'empty';
+    const t = document.createElement('div'); t.className = 'empty-t'; t.textContent = 'No messages yet';
+    const s = document.createElement('div'); s.className = 'empty-s'; s.textContent = 'Say hi — start the conversation below.';
+    e.append(t, s);
+    box.appendChild(e);
+    return;
+  }
+  list.forEach(m => {
     const own = m.from === 'You';
-    const div = document.createElement('div');
-    div.className = 'msg' + (own ? ' own' : '');
-    const picColor = own ? 'var(--accent-grad)' : color;
-    const initial = (own ? 'Y' : name[0]).toUpperCase();
-    div.innerHTML = `<div class="pic" style="background:${picColor}">${initial}</div>
-      <div class="bubble"><div class="head"><b>${m.from}</b><span>${m.time}</span></div><p></p></div>`;
-    div.querySelector('p').textContent = m.text;
+    const div = document.createElement('div'); div.className = 'msg' + (own ? ' own' : '');
+    const pic = document.createElement('div'); pic.className = 'pic';
+    if (own) { pic.style.background = 'var(--accent-grad)'; pic.textContent = (displayName()[0] || 'Y').toUpperCase(); }
+    else { pic.style.background = m.color || colorFor(m.from); pic.textContent = m.from === BOT_NAME ? '🤖' : (m.from[0] || '?').toUpperCase(); }
+    const bub = document.createElement('div'); bub.className = 'bubble';
+    const head = document.createElement('div'); head.className = 'head';
+    const b = document.createElement('b'); b.textContent = own ? 'You' : m.from;
+    if (!own) b.style.color = 'var(--accent-2)';
+    if (m.from === BOT_NAME) {
+      const tag = document.createElement('span');
+      tag.style.cssText = 'font-size:10px;font-weight:800;background:rgba(34,211,238,.15);color:#22d3ee;padding:1px 6px;border-radius:6px';
+      tag.textContent = 'BOT';
+      head.append(tag);
+    }
+    const sp = document.createElement('span'); sp.textContent = m.time || '';
+    const p = document.createElement('p'); p.textContent = m.text;
+    head.append(b, sp); bub.append(head, p); div.append(pic, bub);
     box.appendChild(div);
   });
   box.scrollTop = box.scrollHeight;
 }
+function renderChat() {
+  if (document.getElementById('view-friends').style.display !== 'none') return;
+  if (currentDM) {
+    const d = store.dms.find(x => x.name === currentDM);
+    renderMsgs(store.msgs[dmKey(currentDM)] || []);
+    paintDMHeader(currentDM, !!(d && d.bot));
+  } else if (activeServer()) {
+    renderMsgs(store.msgs[srvKey(currentServerId, currentChannel)] || []);
+    paintServerHeader();
+  } else {
+    document.getElementById('chat-ico').textContent = '#';
+    document.getElementById('chanName').textContent = 'No server';
+    document.getElementById('chat-topic').textContent = 'Create a server to start chatting';
+    document.getElementById('input').placeholder = 'Create a server first';
+    renderMsgs([]);
+  }
+}
+function paintDMHeader(name, isBot) {
+  document.getElementById('chat-ico').textContent = '@';
+  document.getElementById('chanName').textContent = name;
+  document.getElementById('chat-topic').textContent = isBot ? 'Test bot — answers instantly, try "help"' : 'Direct message with ' + name;
+  document.getElementById('input').placeholder = 'Message @' + name;
+}
+function paintServerHeader() {
+  const srv = activeServer();
+  if (!srv) return;
+  document.getElementById('chat-ico').textContent = '#';
+  document.getElementById('chanName').textContent = currentChannel;
+  document.getElementById('chat-topic').textContent = 'Welcome to ' + srv.name + ' — every voice matters';
+  document.getElementById('input').placeholder = 'Message #' + currentChannel;
+}
+
+/* ===== Navigation (store-backed) ===== */
+function switchServerById(id) {
+  if (!guardAuth()) return;
+  const s = store.servers.find(x => x.id === id);
+  if (!s) return;
+  currentServerId = id;
+  currentChannel = s.channels[0] || 'general';
+  currentDM = null;
+  saveStore(); renderAll();
+  setScope('server'); showView('chat'); renderChat();
+}
+function switchServer(el, name) {
+  if (!guardAuth()) return;
+  const s = store.servers.find(x => x.id === name) || store.servers.find(x => x.name === name);
+  if (s) switchServerById(s.id);
+}
+function switchChannelByName(name) {
+  if (!guardAuth()) return;
+  currentChannel = name;
+  currentDM = null;
+  saveStore(); renderAll();
+  setScope('server'); showView('chat'); renderChat();
+}
+function switchChannel(el, name) { switchChannelByName(name); }
+function createServer() {
+  if (!guardAuth()) return;
+  const name = (prompt('Server name:') || '').trim().slice(0, 32);
+  if (!name) return;
+  const s = { id: uid('srv'), name, channels: ['general'], members: [displayName()] };
+  store.servers.push(s);
+  store.msgs[srvKey(s.id, 'general')] = [];
+  saveStore();
+  switchServerById(s.id);
+}
+function addChannel() {
+  if (!guardAuth()) return;
+  const srv = activeServer();
+  if (!srv) return;
+  const name = (prompt('Channel name:') || '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24);
+  if (!name || srv.channels.includes(name)) return;
+  srv.channels.push(name);
+  store.msgs[srvKey(srv.id, name)] = [];
+  saveStore();
+  switchChannelByName(name);
+}
+function openDM(name) {
+  if (!guardAuth()) return;
+  const d = ensureDM(name);
+  d.unread = 0;
+  currentDM = d.name;
+  saveStore(); renderAll();
+  setScope('home');
+  document.getElementById('nav-friends').classList.remove('active');
+  showView('chat'); renderChat();
+  document.getElementById('input').focus();
+}
+function renderDM() { if (store) renderChat(); }
 function send() {
   if (!currentUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
-  const inp = document.getElementById('input');
-  if(!inp.value.trim()) return;
-  // if in friends view, ignore
+  if (!store) loadStore();
   if (document.getElementById('view-friends').style.display !== 'none') return;
-  const box = document.getElementById('msgs');
-  // if we're in a server channel with default messages, just append (old behavior)
-  // if in DM, also push to history
-  const text = inp.value;
+  const inp = document.getElementById('input');
+  const text = inp.value.trim();
+  if (!text) return;
   if (currentDM) {
-    DM_HISTORY[currentDM] = DM_HISTORY[currentDM] || [];
-    DM_HISTORY[currentDM].push({from:'You', text, time:'Just now'});
+    const k = dmKey(currentDM);
+    store.msgs[k] = store.msgs[k] || [];
+    store.msgs[k].push({ from: 'You', text, time: nowStamp() });
+    saveStore(); renderChat();
+    inp.value = '';
+    if (currentDM === BOT_NAME) botRespond(text);
+    else renderDMs();
+  } else {
+    const srv = activeServer();
+    if (!srv) return;
+    const k = srvKey(srv.id, currentChannel);
+    store.msgs[k] = store.msgs[k] || [];
+    store.msgs[k].push({ from: 'You', text, time: nowStamp() });
+    saveStore(); renderChat();
+    inp.value = '';
   }
-  const div = document.createElement('div');
-  div.className = 'msg own';
-  div.innerHTML = `<div class="pic" style="background:var(--accent-grad)">Y</div>
-    <div class="bubble"><div class="head"><b>You</b><span>Just now</span></div><p></p></div>`;
-  div.querySelector('p').textContent = text;
-  box.appendChild(div);
-  inp.value = '';
+}
+
+/* ===== Single test bot (auto-replies so messaging can be tested) ===== */
+let botTimer = null;
+function botReply(userText) {
+  const t = ' ' + userText.toLowerCase().trim() + ' ';
+  const has = (...ws) => ws.some(w => t.includes(w));
+  if (has('help', 'commands', 'what can you')) return 'Here is what you can test with me:\n• Just chat — I echo everything back\n• "who are you" — about me\n• "server" — how servers work\n• "ping" — latency check';
+  if (has('ping')) return 'pong 🏓 — messaging works, delay was ~instant.';
+  if (has('who are you', 'your name', 'what are you')) return 'I\'m ' + BOT_NAME + ' 🤖, the built-in test buddy. I live in your browser (no backend) so you can test sending, replies, unread badges and history.';
+  if (has('server')) return 'Servers are per-account here: press + in the left rail, name it, and you get a #general channel. New accounts start with zero servers — go make one!';
+  if (has('friend')) return 'Friends start empty too. Hit "+ Add Friend" in the Friends tab, then message them from the 💬 button.';
+  if (has('username', 'my name')) return 'Your username is "' + displayName() + '". It was picked at sign-in and shown bottom-left.';
+  if (has('thank', 'thanks', 'thx')) return 'Anytime! That reply proves incoming messages render fine. ✅';
+  if (has('bye', 'goodbye', 'good night')) return 'Bye! I\'ll be here whenever you want to test again. 👋';
+  if (has(' hi ', ' hello ', ' hey ', ' yo ', ' salam ', ' marhaba ', ' hello', ' hey!')) {
+    const h = userText.trim();
+    return 'Hey! 👋 You wrote: "' + h.slice(0, 120) + '" — loud and clear.';
+  }
+  const fallbacks = [
+    'Echo ✅ — you wrote: "' + userText.slice(0, 140) + '"',
+    'Got it: "' + userText.slice(0, 140) + '" — send/receive works!',
+    'Interesting… "' + userText.slice(0, 140) + '" — try "help" for tricks.'
+  ];
+  botReply.n = ((botReply.n || 0) + 1) % fallbacks.length;
+  return fallbacks[botReply.n];
+}
+function botRespond(userText) {
+  const box = document.getElementById('msgs');
+  const typing = document.createElement('div');
+  typing.className = 'typing'; typing.id = 'typing';
+  typing.textContent = BOT_NAME + ' is typing…';
+  box.appendChild(typing);
   box.scrollTop = box.scrollHeight;
+  const reply = botReply(userText);
+  const delay = Math.min(2000, 700 + userText.length * 12);
+  clearTimeout(botTimer);
+  botTimer = setTimeout(() => {
+    const t = document.getElementById('typing');
+    if (t) t.remove();
+    const k = dmKey(BOT_NAME);
+    store.msgs[k] = store.msgs[k] || [];
+    store.msgs[k].push({ from: BOT_NAME, color: BOT_COLOR, text: reply, time: nowStamp() });
+    saveStore();
+    if (currentDM === BOT_NAME && document.getElementById('view-friends').style.display === 'none') renderChat();
+    else {
+      const d = store.dms.find(x => x.name === BOT_NAME);
+      if (d) d.unread = (d.unread || 0) + 1;
+      saveStore(); renderDMs();
+    }
+  }, delay);
 }
 
 /* ===== Friends (home scope, Discord-style) ===== */
 function showFriends() {
-  clearRail(); clearServerActive(); clearDMActive();
-  document.getElementById('rail-home').classList.add('active');
-  document.getElementById('nav-friends').classList.add('active');
+  if (currentUser && !store) loadStore();
   currentDM = null;
+  if (store) { saveStore(); renderAll(); }
+  else { clearRail(); clearServerActive(); clearDMActive(); document.getElementById('rail-home').classList.add('active'); }
+  document.getElementById('nav-friends').classList.add('active');
   setScope('home');
   document.getElementById('chat-ico').textContent = '👥';
   document.getElementById('chanName').textContent = 'Friends';
-  document.getElementById('chat-topic').textContent = 'All your friends in one place';
+  document.getElementById('chat-topic').textContent = store && store.friends.length ? 'All your friends in one place' : 'No friends yet — add your first one';
   showView('friends');
 }
 function filterFriends(group, btn) {
@@ -560,7 +806,6 @@ function filterFriends(group, btn) {
   const q = (document.getElementById('fsearch').value || '').toLowerCase();
   document.querySelectorAll('.friend-row').forEach(r => {
     const matchGroup = group === 'all' ? true : group === 'online' ? r.dataset.group === 'online' : group === 'pending' ? r.dataset.group === 'pending' : r.dataset.group === 'blocked';
-    // demo: only online/all have data; pending/blocked show empty
     const matchSearch = r.dataset.name.includes(q);
     r.style.display = (matchGroup && matchSearch) ? 'flex' : 'none';
   });
@@ -589,23 +834,24 @@ function searchFriends() {
   filterFriends(group === 'online' ? 'online' : group, active || document.querySelector('#ftabs button'));
 }
 function addFriend() {
-  const name = prompt('Enter username to add (e.g. Nova):');
+  if (!guardAuth()) return;
+  const raw = prompt('Friend username:');
+  if (!raw) return;
+  const name = raw.trim().slice(0, 20);
   if (!name) return;
-  alert('Friend request sent to ' + name + ' ✅');
+  if (store.friends.find(f => f.name.toLowerCase() === name.toLowerCase())) { alert(name + ' is already your friend.'); return; }
+  store.friends.push({ name, group: 'all', status: 'off', sub: 'offline', color: colorFor(name) });
+  saveStore(); renderFriends();
 }
 function addDM() {
-  const name = prompt('Start a DM with (username):');
+  if (!guardAuth()) return;
+  const raw = prompt('Start a DM with (username):');
+  if (!raw) return;
+  const name = raw.trim().slice(0, 20);
   if (!name) return;
-  const list = document.getElementById('dm-list');
-  const div = document.createElement('div');
-  div.className = 'dm';
-  div.dataset.dm = name;
-  div.onclick = function(){ openDM(name, div); };
-  const initial = name[0].toUpperCase();
-  div.innerHTML = `<div class="dwrap"><div class="dava" style="background:#3b82f6">${initial}</div><div class="dstatus on"></div></div><span></span><span class="x">✕</span>`;
-  div.querySelector('span').textContent = name;
-  list.appendChild(div);
-  openDM(name, div);
+  ensureDM(name);
+  saveStore();
+  openDM(name);
 }
 
 /* ===== Supabase Auth (email + password) ===== */
@@ -775,6 +1021,8 @@ function setUser(user) {
   const overlay = document.getElementById('auth-overlay');
   const upick = document.getElementById('username-overlay');
   if (!user) {
+    store = null;
+    bootedFor = null;
     overlay.style.display = 'flex';
     if (upick) upick.style.display = 'none';
     document.getElementById('me-avatar').textContent = '?';
@@ -797,6 +1045,18 @@ function setUser(user) {
     setTimeout(() => document.getElementById('username-input').focus(), 50);
   } else if (upick) {
     upick.style.display = 'none';
+  }
+  // Bootstrap this account's (empty-by-default) workspace once per login.
+  if (bootedFor !== user.id) {
+    bootedFor = user.id;
+    loadStore();
+    renderAll();
+    if (store.servers.length) {
+      const target = store.servers.find(s => s.id === currentServerId) || store.servers[0];
+      switchServerById(target.id);
+    } else {
+      showFriends();
+    }
   }
 }
 async function saveUsername(e) {
@@ -821,8 +1081,10 @@ async function saveUsername(e) {
     const { data, error } = await supa.auth.updateUser({ data: { username: name } });
     if (error) throw error;
     const user = (data && data.user) || (await supa.auth.getUser()).data.user;
-    setUser(user || currentUser);
+    if (user) currentUser = user;
+    setUser(currentUser);
     document.getElementById('username-overlay').style.display = 'none';
+    if (store) { renderAll(); }
   } catch (err) {
     errEl.style.display = 'block';
     errEl.textContent = err.message || 'Could not save username.';
@@ -839,7 +1101,8 @@ async function logout() {
 }
 
 (async function init(){
-  setScope('server');
+  setScope('home');
+  showView('friends');
   try { localStorage.removeItem('chorus-layout'); } catch(e) {}
   if (!supa) { setUser(null); showAuthErr('Could not load Supabase. Check internet connection.'); return; }
   await handleEmailLink();
