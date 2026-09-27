@@ -24,20 +24,21 @@
     --bubble-own: #1d4ed8;
     --bubble-text: #d9e2f5;
   }
+  /* Minimal — now DARK mode, compact */
   body[data-layout="minimal"] {
-    --bg-deep: #eef2f7;
-    --bg-side: #ffffff;
-    --bg-mid: #f1f5f9;
-    --bg-chat: #f8fafc;
-    --line: #e2e8f0;
-    --accent: #2563eb;
-    --accent-2: #0ea5e9;
+    --bg-deep: #0b0e15;
+    --bg-side: #11161f;
+    --bg-mid: #1a212f;
+    --bg-chat: #0e121b;
+    --line: #1f2739;
+    --accent: #3b82f6;
+    --accent-2: #38bdf8;
     --accent-grad: linear-gradient(135deg, #2563eb, #0ea5e9);
-    --text: #0f172a;
-    --muted: #64748b;
+    --text: #e6ebf5;
+    --muted: #7d869e;
     --bubble: transparent;
-    --bubble-own: #eff6ff;
-    --bubble-text: #334155;
+    --bubble-own: transparent;
+    --bubble-text: #c6cfe3;
   }
   body[data-layout="focus"] {
     --bg-deep: #060a18;
@@ -60,7 +61,6 @@
     height: 100vh; overflow: hidden; display: flex;
     transition: background .25s, color .25s;
   }
-  /* Focus ambient glow */
   body[data-layout="focus"] {
     background:
       radial-gradient(800px 500px at 20% 0%, rgba(59,130,246,.22), transparent 60%),
@@ -93,13 +93,15 @@
     background: var(--accent-2); border-radius: 4px;
   }
   .srv.add { border: 2px dashed var(--line); color: var(--accent-2); background: transparent; }
+  .srv.home { font-size: 20px; }
 
-  /* ===== 2. CHANNELS ===== */
+  /* ===== 2. CHANNELS / SIDE PANEL ===== */
   .channels { width: 260px; background: var(--bg-side); display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid var(--line); }
   .server-head { padding: 16px; font-weight: 800; font-size: 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
   .server-head span.badge { font-size: 11px; background: var(--accent-grad); padding: 3px 9px; border-radius: 20px; color:white; letter-spacing:.02em; }
   .chan-list { padding: 12px 10px; flex: 1; overflow-y: auto; }
-  .cat { font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 14px 6px 6px; display:flex; justify-content:space-between; }
+  .cat { font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 14px 6px 6px; display:flex; justify-content:space-between; align-items:center; }
+  .cat span { cursor:pointer; font-size:14px; }
   .chan { padding: 8px 10px; border-radius: 10px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14.5px; margin-bottom: 2px; transition:.15s; }
   .chan:hover { background: var(--bg-mid); color: var(--text); }
   .chan.active { background: var(--bg-mid); color: var(--text); font-weight:600; }
@@ -107,6 +109,30 @@
   .chan.active .dot { width:8px; height:8px; background: var(--accent-2); border-radius:50%; margin-left:auto; }
   .voice-user { display:flex; align-items:center; gap:8px; padding:4px 10px 4px 34px; font-size:13px; color:var(--muted); }
   .voice-user img { width:22px; height:22px; border-radius:8px; }
+
+  /* side nav (Friends button) + DMs */
+  .nav-item {
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px;
+    color:var(--muted); cursor:pointer; font-size:14.5px; font-weight:600; transition:.15s;
+  }
+  .nav-item:hover { background:var(--bg-mid); color:var(--text); }
+  .nav-item.active { background:rgba(59,130,246,.15); color:var(--text); }
+  .nav-item .ico { width:28px; height:28px; border-radius:8px; background:var(--bg-mid); display:grid; place-items:center; font-size:15px; }
+  .nav-item.active .ico { background:var(--accent-grad); }
+  .dm {
+    display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:10px;
+    cursor:pointer; color:var(--muted); font-size:14px; transition:.15s;
+  }
+  .dm:hover { background:var(--bg-mid); color:var(--text); }
+  .dm.active { background:rgba(59,130,246,.15); color:var(--text); font-weight:600; }
+  .dm .dwrap { position:relative; flex-shrink:0; }
+  .dm .dava { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:13px; color:white; }
+  .dm .dstatus { position:absolute; bottom:-1px; right:-1px; width:11px; height:11px; border-radius:50%; border:2px solid var(--bg-side); }
+  .dm .x { margin-left:auto; opacity:0; font-size:13px; }
+  .dm:hover .x { opacity:.6; }
+  .dm .unread { margin-left:auto; background:var(--accent); color:white; font-size:11px; font-weight:800; min-width:19px; height:19px; border-radius:10px; display:grid; place-items:center; padding:0 5px; }
+  .dm:has(.unread) .x { display:none; }
+
   .me { margin:10px; background:var(--bg-mid); border-radius:14px; padding:10px; display:flex; align-items:center; gap:10px; border:1px solid var(--line); }
   .me .avatar { width:36px; height:36px; border-radius:12px; background:var(--accent-grad); display:grid; place-items:center; font-weight:800; color:white; }
   .me small { color:var(--accent-2); font-size:12px; }
@@ -114,20 +140,11 @@
 
   /* ===== 3. CHAT ===== */
   .chat { flex:1; background:var(--bg-chat); display:flex; flex-direction:column; min-width:0; }
-  .chat-head { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; font-weight:700; }
+  .chat-head { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; font-weight:700; min-height:57px; }
   .chat-head .topic { color:var(--muted); font-weight:400; font-size:13px; border-left:1px solid var(--line); padding-left:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .chat-head .right { margin-left:auto; color:var(--muted); display:flex; gap:14px; cursor:pointer; align-items:center; }
-
-  /* Layout switcher — small segmented pill */
-  .layout-switch {
-    display:flex; background:var(--bg-mid); border:1px solid var(--line);
-    border-radius:999px; padding:3px; gap:2px; margin-right:6px;
-  }
-  .layout-switch button {
-    border:none; background:transparent; color:var(--muted);
-    font-size:12px; font-weight:700; padding:5px 11px; border-radius:999px;
-    cursor:pointer; transition:.18s; white-space:nowrap;
-  }
+  .layout-switch { display:flex; background:var(--bg-mid); border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; margin-right:6px; }
+  .layout-switch button { border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:700; padding:5px 11px; border-radius:999px; cursor:pointer; transition:.18s; white-space:nowrap; }
   .layout-switch button:hover { color:var(--text); }
   .layout-switch button.active { background:var(--accent-grad); color:white; box-shadow:0 2px 10px rgba(59,130,246,.4); }
 
@@ -154,6 +171,32 @@
   .input-bar button { background: var(--accent-grad); border:none; color:white; width:38px; height:38px; border-radius:12px; font-size:18px; cursor:pointer; }
   .input-bar button:hover { filter:brightness(1.12); }
 
+  /* ===== FRIENDS VIEW ===== */
+  #view-friends { flex:1; overflow-y:auto; padding:22px 26px; display:flex; flex-direction:column; gap:14px; }
+  .friends-toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .ftabs { display:flex; gap:4px; background:var(--bg-mid); border:1px solid var(--line); padding:4px; border-radius:12px; }
+  .ftabs button { border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:700; padding:7px 13px; border-radius:8px; cursor:pointer; }
+  .ftabs button.active { background:var(--bg-side); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .fsearch { flex:1; min-width:180px; background:var(--bg-mid); border:1px solid var(--line); border-radius:10px; padding:9px 12px; color:var(--text); outline:none; font-size:13.5px; }
+  .fsearch::placeholder { color:var(--muted); }
+  .fsearch:focus { border-color:var(--accent); }
+  .add-btn { background:var(--accent-grad); border:none; color:white; font-weight:700; font-size:13.5px; padding:9px 16px; border-radius:10px; cursor:pointer; white-space:nowrap; }
+  .add-btn:hover { filter:brightness(1.1); }
+  .friends-wrap h4 { font-size:11px; color:var(--muted); letter-spacing:.06em; margin:8px 2px 2px; }
+  .friend-row {
+    display:flex; align-items:center; gap:12px; padding:10px 12px;
+    border:1px solid var(--line); background:var(--bg-side); border-radius:14px; transition:.15s;
+  }
+  .friend-row:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .friend-row .wrap { position:relative; flex-shrink:0; }
+  .friend-row .ava { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-weight:800; color:white; font-size:15px; }
+  .friend-row .fname { font-weight:700; font-size:14.5px; }
+  .friend-row .fsub { font-size:12.5px; color:var(--muted); }
+  .friend-row .acts { margin-left:auto; display:flex; gap:8px; }
+  .icon-btn { width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--bg-mid); color:var(--text); cursor:pointer; display:grid; place-items:center; font-size:15px; }
+  .icon-btn:hover { border-color:var(--accent); }
+  .icon-btn.primary { background:var(--accent-grad); border:none; color:white; }
+
   /* ===== 4. MEMBERS ===== */
   .members { width:240px; background:var(--bg-side); padding:16px 12px; overflow-y:auto; border-left:1px solid var(--line); flex-shrink:0; }
   .members h4 { font-size:11px; color:var(--muted); letter-spacing:.06em; margin:10px 6px; }
@@ -162,34 +205,35 @@
   .member .wrap { position:relative; }
   .member .wrap .ava { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:14px; color:white; }
   .status { position:absolute; bottom:-1px; right:-1px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg-side); }
-  .on { background:#22c55e; } .idle { background:#f59e0b; } .busy { background:#ef4444; } .off { background:#94a3b8; }
+  .on { background:#22c55e; } .idle { background:#f59e0b; } .busy { background:#ef4444; } .off { background:#64748b; }
 
-  /* ===== LAYOUT: MINIMAL (light, compact, Slack-like) ===== */
-  body[data-layout="minimal"] .servers { width:64px; background:#fff; }
+  /* ===== LAYOUT: MINIMAL DARK (compact) ===== */
+  body[data-layout="minimal"] .servers { width:64px; }
   body[data-layout="minimal"] .servers .logo { border-radius:12px; width:42px; height:42px; font-size:19px; }
-  body[data-layout="minimal"] .srv { width:42px; height:42px; border-radius:50%; background:#f1f5f9; font-size:15px; border:none; }
+  body[data-layout="minimal"] .srv { width:42px; height:42px; border-radius:50%; font-size:15px; border:none; }
   body[data-layout="minimal"] .srv.active { border-radius:14px; }
   body[data-layout="minimal"] .srv.active::before { display:none; }
-  body[data-layout="minimal"] .channels { width:230px; background:#fff; }
+  body[data-layout="minimal"] .channels { width:240px; }
   body[data-layout="minimal"] .chan { border-radius:8px; }
-  body[data-layout="minimal"] .chan.active { background:#eff6ff; color:var(--accent); }
-  body[data-layout="minimal"] .chan.active .dot { background:var(--accent); }
-  body[data-layout="minimal"] .me { background:#f8fafc; border-color:var(--line); border-radius:12px; }
+  body[data-layout="minimal"] .chan.active { background:rgba(59,130,246,.16); color:var(--text); }
+  body[data-layout="minimal"] .chan.active .dot { background:var(--accent-2); }
+  body[data-layout="minimal"] .me { border-radius:12px; }
   body[data-layout="minimal"] .members { display:none; }
   body[data-layout="minimal"] .messages { gap:2px; padding:12px 20px; }
   body[data-layout="minimal"] .msg { max-width:100%; padding:8px 10px; border-radius:10px; }
-  body[data-layout="minimal"] .msg:hover { background:#fff; }
+  body[data-layout="minimal"] .msg:hover { background:rgba(255,255,255,.03); }
   body[data-layout="minimal"] .msg .pic { width:34px; height:34px; border-radius:50%; font-size:14px; }
   body[data-layout="minimal"] .bubble { background:transparent; padding:0; border:none; }
-  body[data-layout="minimal"] .bubble p { color:#334155; }
+  body[data-layout="minimal"] .bubble p { color:var(--bubble-text); }
   body[data-layout="minimal"] .msg.own { align-self:stretch; flex-direction:row; }
   body[data-layout="minimal"] .msg.own .bubble { background:transparent; border-radius:0; }
   body[data-layout="minimal"] .msg.own .pic { border-radius:50%; }
   body[data-layout="minimal"] .input-wrap { padding:12px 20px 18px; background:var(--bg-chat); }
-  body[data-layout="minimal"] .input-bar { background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(15,23,42,.06); }
-  body[data-layout="minimal"] .chat-head { background:#fff; }
+  body[data-layout="minimal"] .input-bar { border-radius:12px; }
+  body[data-layout="minimal"] #view-friends { padding:18px 20px; }
+  body[data-layout="minimal"] .friend-row { background:var(--bg-side); }
 
-  /* ===== LAYOUT: FOCUS (premium centered, glassy) ===== */
+  /* ===== LAYOUT: FOCUS ===== */
   body[data-layout="focus"] .servers { background:transparent; border:none; width:70px; }
   body[data-layout="focus"] .srv { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(10px); color:#dbe2f5; }
   body[data-layout="focus"] .srv.active::before { display:none; }
@@ -197,12 +241,10 @@
   body[data-layout="focus"] .channels { background:var(--bg-side); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:14px 0 14px 4px; border-right:1px solid var(--line); width:250px; overflow:hidden; }
   body[data-layout="focus"] .members { display:none; }
   body[data-layout="focus"] .chat { background:transparent; align-items:center; }
-  body[data-layout="focus"] .chat-head {
-    width:min(860px, 94%); background:rgba(255,255,255,.06); backdrop-filter:blur(16px);
-    border:1px solid var(--line); border-radius:16px; margin:14px 0 0; padding:12px 16px;
-  }
+  body[data-layout="focus"] .chat-head { width:min(860px, 94%); background:rgba(255,255,255,.06); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:16px; margin:14px 0 0; padding:12px 16px; }
   body[data-layout="focus"] .chat-head .topic { display:none; }
-  body[data-layout="focus"] .messages { width:min(860px, 94%); background:rgba(255,255,255,.04); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:12px 0; padding:24px 22px; }
+  body[data-layout="focus"] .messages, body[data-layout="focus"] #view-friends { width:min(860px, 94%); background:rgba(255,255,255,.04); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:12px 0; }
+  body[data-layout="focus"] #view-friends { padding:20px; }
   body[data-layout="focus"] .bubble { backdrop-filter:blur(8px); border-color:rgba(255,255,255,.08); border-radius:6px 18px 18px 18px; box-shadow:0 4px 20px rgba(0,0,0,.25); }
   body[data-layout="focus"] .msg { max-width:85%; }
   body[data-layout="focus"] .input-wrap { width:min(860px, 94%); padding:0 0 18px; background:transparent; }
@@ -210,16 +252,18 @@
   body[data-layout="focus"] .input-bar button { border-radius:50%; }
   body[data-layout="focus"] .me { background:rgba(255,255,255,.06); }
   body[data-layout="focus"] .layout-switch { background:rgba(255,255,255,.08); }
+  body[data-layout="focus"] .friend-row { background:rgba(255,255,255,.05); }
 
   ::-webkit-scrollbar { width:8px; }
   ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
 </style>
 </head>
-<body data-layout="classic">
+<body data-layout="minimal">
 
 <div class="servers">
-  <div class="logo" title="Chorus">C</div>
+  <div class="logo" title="Chorus" onclick="showChat()">C</div>
   <div class="sep"></div>
+  <div class="srv home" title="Friends / DMs" onclick="showFriends(this)">👥</div>
   <div class="srv active" onclick="switchServer(this,'Pixel Tavern')">PT</div>
   <div class="srv" onclick="switchServer(this,'Study Den')">SD</div>
   <div class="srv" onclick="switchServer(this,'Movie Night')">🎬</div>
@@ -230,15 +274,37 @@
 <div class="channels">
   <div class="server-head"><div id="serverName">Pixel Tavern</div><span class="badge">CHORUS+</span></div>
   <div class="chan-list">
-    <div class="cat">TEXT CHANNELS <span>+</span></div>
-    <div class="chan active" onclick="switchChannel(this,'general')">💬 general <div class="dot"></div></div>
-    <div class="chan" onclick="switchChannel(this,'clips')">📸 clips</div>
-    <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
-    <div class="cat">VOICE CHANNELS <span>+</span></div>
-    <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
-    <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
-    <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
-    <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
+    <div class="nav-item" id="nav-friends" onclick="showFriends()"> <div class="ico">👥</div> Friends </div>
+    <div id="server-channels">
+      <div class="cat">TEXT CHANNELS <span>+</span></div>
+      <div class="chan active" onclick="switchChannel(this,'general')">💬 general <div class="dot"></div></div>
+      <div class="chan" onclick="switchChannel(this,'clips')">📸 clips</div>
+      <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
+      <div class="cat">VOICE CHANNELS <span>+</span></div>
+      <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
+      <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
+      <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
+      <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
+    </div>
+    <div class="cat">DIRECT MESSAGES <span onclick="addDM()">+</span></div>
+    <div id="dm-list">
+      <div class="dm" data-dm="Nova" onclick="openDM('Nova',this)">
+        <div class="dwrap"><div class="dava" style="background:#3b82f6">N</div><div class="dstatus on"></div></div>
+        <span>Nova</span><span class="unread">2</span>
+      </div>
+      <div class="dm" data-dm="Kai" onclick="openDM('Kai',this)">
+        <div class="dwrap"><div class="dava" style="background:#0ea5e9">K</div><div class="status on" style="position:absolute;bottom:-1px;right:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--bg-side);background:#22c55e"></div></div>
+        <span>Kai</span><span class="x">✕</span>
+      </div>
+      <div class="dm" data-dm="Mira" onclick="openDM('Mira',this)">
+        <div class="dwrap"><div class="dava" style="background:#f59e0b">M</div><div class="dstatus idle"></div></div>
+        <span>Mira</span><span class="x">✕</span>
+      </div>
+      <div class="dm" data-dm="Zed" onclick="openDM('Zed',this)">
+        <div class="dwrap"><div class="dava" style="background:#8b5cf6">Z</div><div class="dstatus busy"></div></div>
+        <span>Zed</span><span class="x">✕</span>
+      </div>
+    </div>
   </div>
   <div class="me">
     <div class="avatar">Y</div>
@@ -249,36 +315,88 @@
 
 <div class="chat">
   <div class="chat-head">
-    <span style="color:var(--muted)">#</span> <span id="chanName">general</span>
-    <span class="topic">Welcome to Chorus — every voice matters</span>
+    <span id="chat-ico" style="color:var(--muted)">#</span> <span id="chanName">general</span>
+    <span class="topic" id="chat-topic">Welcome to Chorus — every voice matters</span>
     <div class="right">
       <div class="layout-switch" title="Switch layout">
-        <button data-layout-btn="classic" class="active" onclick="setLayout('classic')">Classic</button>
-        <button data-layout-btn="minimal" onclick="setLayout('minimal')">Minimal</button>
+        <button data-layout-btn="classic" onclick="setLayout('classic')">Classic</button>
+        <button data-layout-btn="minimal" class="active" onclick="setLayout('minimal')">Minimal</button>
         <button data-layout-btn="focus" onclick="setLayout('focus')">Focus</button>
       </div>
       <span>📌</span><span>👥</span><span>🔍</span>
     </div>
   </div>
-  <div class="messages" id="msgs">
-    <div class="msg">
-      <div class="pic" style="background:#3b82f6">N</div>
-      <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Nova</b><span>Today at 4:12 PM</span></div><p>Anyone up for ranked tonight? Need 1 more 🏆</p></div>
+
+  <!-- CHAT / DM VIEW -->
+  <div id="view-chat" style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="messages" id="msgs">
+      <div class="msg">
+        <div class="pic" style="background:#3b82f6">N</div>
+        <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Nova</b><span>Today at 4:12 PM</span></div><p>Anyone up for ranked tonight? Need 1 more 🏆</p></div>
+      </div>
+      <div class="msg">
+        <div class="pic" style="background:#0ea5e9">K</div>
+        <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Kai</b><span>Today at 4:15 PM</span></div><p>I'm in! Just finished my setup, new mic sounds clean?</p></div>
+      </div>
+      <div class="msg own">
+        <div class="pic" style="background:var(--accent-grad)">Y</div>
+        <div class="bubble"><div class="head"><b>You</b><span>Today at 4:16 PM</span></div><p>Lets gooo, invite me when lobby opens 🔥</p></div>
+      </div>
     </div>
-    <div class="msg">
-      <div class="pic" style="background:#0ea5e9">K</div>
-      <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Kai</b><span>Today at 4:15 PM</span></div><p>I'm in! Just finished my setup, new mic sounds clean?</p></div>
-    </div>
-    <div class="msg own">
-      <div class="pic" style="background:var(--accent-grad)">Y</div>
-      <div class="bubble"><div class="head"><b>You</b><span>Today at 4:16 PM</span></div><p>Lets gooo, invite me when lobby opens 🔥</p></div>
+    <div class="input-wrap">
+      <div class="input-bar">
+        <span style="margin-right:10px;color:var(--muted)">😊</span>
+        <input id="input" placeholder="Message #general" onkeydown="if(event.key==='Enter')send()" />
+        <button onclick="send()">↑</button>
+      </div>
     </div>
   </div>
-  <div class="input-wrap">
-    <div class="input-bar">
-      <span style="margin-right:10px;color:var(--muted)">😊</span>
-      <input id="input" placeholder="Message #general" onkeydown="if(event.key==='Enter')send()" />
-      <button onclick="send()">↑</button>
+
+  <!-- FRIENDS VIEW -->
+  <div id="view-friends" class="friends-wrap" style="display:none">
+    <div class="friends-toolbar">
+      <div class="ftabs" id="ftabs">
+        <button class="active" onclick="filterFriends('online',this)">Online</button>
+        <button onclick="filterFriends('all',this)">All</button>
+        <button onclick="filterFriends('pending',this)">Pending</button>
+        <button onclick="filterFriends('blocked',this)">Blocked</button>
+      </div>
+      <input class="fsearch" id="fsearch" placeholder="Search friends" oninput="searchFriends()" />
+      <button class="add-btn" onclick="addFriend()">+ Add Friend</button>
+    </div>
+    <div id="friends-list">
+      <h4>ONLINE — 4</h4>
+      <div class="friend-row" data-name="nova" data-group="online">
+        <div class="wrap"><div class="ava" style="background:#3b82f6">N</div><div class="status on"></div></div>
+        <div><div class="fname">Nova</div><div class="fsub">Playing Ranked • online</div></div>
+        <div class="acts"><button class="icon-btn primary" title="Message" onclick="openDM('Nova')">💬</button><button class="icon-btn" title="Call">📞</button><button class="icon-btn" title="More">⋯</button></div>
+      </div>
+      <div class="friend-row" data-name="kai" data-group="online" style="margin-top:8px">
+        <div class="wrap"><div class="ava" style="background:#0ea5e9">K</div><div class="status on"></div></div>
+        <div><div class="fname">Kai</div><div class="fsub">online</div></div>
+        <div class="acts"><button class="icon-btn primary" onclick="openDM('Kai')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
+      </div>
+      <div class="friend-row" data-name="mira" data-group="online" style="margin-top:8px">
+        <div class="wrap"><div class="ava" style="background:#f59e0b">M</div><div class="status idle"></div></div>
+        <div><div class="fname">Mira</div><div class="fsub">idle • AFK</div></div>
+        <div class="acts"><button class="icon-btn primary" onclick="openDM('Mira')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
+      </div>
+      <div class="friend-row" data-name="zed" data-group="online" style="margin-top:8px">
+        <div class="wrap"><div class="ava" style="background:#8b5cf6">Z</div><div class="status busy"></div></div>
+        <div><div class="fname">Zed</div><div class="fsub">Do not disturb</div></div>
+        <div class="acts"><button class="icon-btn primary" onclick="openDM('Zed')">💬</button><button class="icon-btn">📞</button><button class="icon-btn">⋯</button></div>
+      </div>
+      <h4 style="margin-top:14px">OFFLINE — 2</h4>
+      <div class="friend-row" data-name="rook" data-group="all" style="opacity:.75">
+        <div class="wrap"><div class="ava" style="background:#64748b">R</div><div class="status off"></div></div>
+        <div><div class="fname">Rook</div><div class="fsub">offline • last seen yesterday</div></div>
+        <div class="acts"><button class="icon-btn primary" onclick="openDM('Rook')">💬</button><button class="icon-btn">⋯</button></div>
+      </div>
+      <div class="friend-row" data-name="juno" data-group="all" style="opacity:.75;margin-top:8px">
+        <div class="wrap"><div class="ava" style="background:#334155">J</div><div class="status off"></div></div>
+        <div><div class="fname">Juno</div><div class="fsub">offline</div></div>
+        <div class="acts"><button class="icon-btn primary" onclick="openDM('Juno')">💬</button><button class="icon-btn">⋯</button></div>
+      </div>
     </div>
   </div>
 </div>
@@ -295,31 +413,173 @@
 </div>
 
 <script>
-function switchServer(el, name) {
+let currentDM = null;
+const DM_COLORS = { Nova:'#3b82f6', Kai:'#0ea5e9', Mira:'#f59e0b', Zed:'#8b5cf6', Rook:'#64748b', Juno:'#334155' };
+const DM_HISTORY = {
+  Nova: [{from:'Nova', text:'yo, ranked at 9?', time:'Today at 3:40 PM'}, {from:'You', text:'yep, I\'m down — same lobby?', time:'Today at 3:42 PM'}],
+  Kai: [{from:'Kai', text:'check this clip 😂', time:'Yesterday at 8:12 PM'}],
+  Mira: [{from:'Mira', text:'study session tomorrow?', time:'Yesterday at 6:00 PM'}],
+  Zed: [{from:'Zed', text:'movie night Friday, you in?', time:'Monday at 12:01 PM'}]
+};
+
+function clearActive() {
+  document.querySelectorAll('.chan').forEach(c=>{c.classList.remove('active'); const d=c.querySelector('.dot'); if(d) d.remove();});
+  document.querySelectorAll('.dm').forEach(d=>d.classList.remove('active'));
+  document.getElementById('nav-friends').classList.remove('active');
   document.querySelectorAll('.srv').forEach(s=>s.classList.remove('active'));
+}
+function showView(which) {
+  document.getElementById('view-chat').style.display = which === 'chat' ? 'flex' : 'none';
+  document.getElementById('view-friends').style.display = which === 'friends' ? 'flex' : 'none';
+}
+function showChat() {
+  showView('chat');
+}
+function switchServer(el, name) {
+  clearActive();
   el.classList.add('active');
   document.getElementById('serverName').textContent = name;
+  // default back to first channel
+  const first = document.querySelector('#server-channels .chan');
+  if (first) { first.classList.add('active'); }
+  currentDM = null;
+  document.getElementById('chat-ico').textContent = '#';
+  document.getElementById('chanName').textContent = 'general';
+  document.getElementById('chat-topic').textContent = 'Welcome to ' + name + ' — every voice matters';
+  document.getElementById('input').placeholder = 'Message #general';
+  showView('chat');
 }
 function switchChannel(el, name) {
-  document.querySelectorAll('.chan').forEach(c=>{c.classList.remove('active'); const d=c.querySelector('.dot'); if(d) d.remove();});
+  clearActive();
   el.classList.add('active');
   const dot = document.createElement('div'); dot.className='dot'; el.appendChild(dot);
+  // keep server active visual
+  const srvs = document.querySelectorAll('.srv');
+  if ([...srvs].every(s=>!s.classList.contains('active')) && srvs[1]) srvs[1].classList.add('active');
+  currentDM = null;
+  document.getElementById('chat-ico').textContent = '#';
   document.getElementById('chanName').textContent = name;
+  document.getElementById('chat-topic').textContent = 'Welcome to #' + name;
   document.getElementById('input').placeholder = 'Message #' + name;
+  showView('chat');
+}
+function openDM(name, el) {
+  if (el) { clearActive(); el.classList.add('active'); const u = el.querySelector('.unread'); if (u) u.remove(); }
+  else { clearActive(); const item = document.querySelector(`.dm[data-dm="${name}"]`); if (item) { item.classList.add('active'); const u=item.querySelector('.unread'); if(u) u.remove(); } }
+  currentDM = name;
+  document.getElementById('chat-ico').textContent = '@';
+  document.getElementById('chanName').textContent = name;
+  document.getElementById('chat-topic').textContent = 'Direct message with ' + name;
+  document.getElementById('input').placeholder = 'Message @' + name;
+  renderDM(name);
+  showView('chat');
+  document.getElementById('input').focus();
+}
+function renderDM(name) {
+  const box = document.getElementById('msgs');
+  box.innerHTML = '';
+  const color = DM_COLORS[name] || '#3b82f6';
+  const hist = DM_HISTORY[name] || [{from:name, text:'Hey! This is the start of your DM history.', time:'Today'}];
+  hist.forEach(m => {
+    const own = m.from === 'You';
+    const div = document.createElement('div');
+    div.className = 'msg' + (own ? ' own' : '');
+    const picColor = own ? 'var(--accent-grad)' : color;
+    const initial = (own ? 'Y' : name[0]).toUpperCase();
+    div.innerHTML = `<div class="pic" style="background:${picColor}">${initial}</div>
+      <div class="bubble"><div class="head"><b>${m.from}</b><span>${m.time}</span></div><p></p></div>`;
+    div.querySelector('p').textContent = m.text;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
 }
 function send() {
   const inp = document.getElementById('input');
   if(!inp.value.trim()) return;
+  // if in friends view, ignore
+  if (document.getElementById('view-friends').style.display !== 'none') return;
   const box = document.getElementById('msgs');
+  // if we're in a server channel with default messages, just append (old behavior)
+  // if in DM, also push to history
+  const text = inp.value;
+  if (currentDM) {
+    DM_HISTORY[currentDM] = DM_HISTORY[currentDM] || [];
+    DM_HISTORY[currentDM].push({from:'You', text, time:'Just now'});
+  }
   const div = document.createElement('div');
   div.className = 'msg own';
   div.innerHTML = `<div class="pic" style="background:var(--accent-grad)">Y</div>
     <div class="bubble"><div class="head"><b>You</b><span>Just now</span></div><p></p></div>`;
-  div.querySelector('p').textContent = inp.value;
+  div.querySelector('p').textContent = text;
   box.appendChild(div);
   inp.value = '';
   box.scrollTop = box.scrollHeight;
 }
+
+/* ===== Friends ===== */
+function showFriends(el) {
+  clearActive();
+  document.getElementById('nav-friends').classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('chat-ico').textContent = '👥';
+  document.getElementById('chanName').textContent = 'Friends';
+  document.getElementById('chat-topic').textContent = 'All your friends in one place';
+  showView('friends');
+}
+function filterFriends(group, btn) {
+  document.querySelectorAll('#ftabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const q = (document.getElementById('fsearch').value || '').toLowerCase();
+  document.querySelectorAll('.friend-row').forEach(r => {
+    const matchGroup = group === 'all' ? true : group === 'online' ? r.dataset.group === 'online' : group === 'pending' ? r.dataset.group === 'pending' : r.dataset.group === 'blocked';
+    // demo: only online/all have data; pending/blocked show empty
+    const matchSearch = r.dataset.name.includes(q);
+    r.style.display = (matchGroup && matchSearch) ? 'flex' : 'none';
+  });
+  // hide section headers when filtering pending/blocked (demo empty state)
+  document.querySelectorAll('#friends-list h4').forEach(h => {
+    h.style.display = (group === 'pending' || group === 'blocked') ? 'none' : 'block';
+  });
+  if (group === 'pending' || group === 'blocked') {
+    let empty = document.getElementById('friends-empty');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.id = 'friends-empty';
+      empty.style.cssText = 'padding:30px;text-align:center;color:var(--muted);font-size:14px;border:1px dashed var(--line);border-radius:14px;margin-top:8px';
+      document.getElementById('friends-list').appendChild(empty);
+    }
+    empty.style.display = 'block';
+    empty.textContent = group === 'pending' ? 'No pending requests 🎉' : 'No blocked users.';
+  } else {
+    const empty = document.getElementById('friends-empty');
+    if (empty) empty.style.display = 'none';
+  }
+}
+function searchFriends() {
+  const active = document.querySelector('#ftabs button.active');
+  const group = !active ? 'all' : active.textContent.toLowerCase();
+  filterFriends(group === 'online' ? 'online' : group, active || document.querySelector('#ftabs button'));
+}
+function addFriend() {
+  const name = prompt('Enter username to add (e.g. Nova):');
+  if (!name) return;
+  alert('Friend request sent to ' + name + ' ✅');
+}
+function addDM() {
+  const name = prompt('Start a DM with (username):');
+  if (!name) return;
+  const list = document.getElementById('dm-list');
+  const div = document.createElement('div');
+  div.className = 'dm';
+  div.dataset.dm = name;
+  div.onclick = function(){ openDM(name, div); };
+  const initial = name[0].toUpperCase();
+  div.innerHTML = `<div class="dwrap"><div class="dava" style="background:#3b82f6">${initial}</div><div class="dstatus on"></div></div><span></span><span class="x">✕</span>`;
+  div.querySelector('span').textContent = name;
+  list.appendChild(div);
+  openDM(name, div);
+}
+
 function setLayout(name) {
   document.body.dataset.layout = name;
   document.querySelectorAll('[data-layout-btn]').forEach(b => {
@@ -328,10 +588,12 @@ function setLayout(name) {
   try { localStorage.setItem('chorus-layout', name); } catch(e) {}
 }
 (function initLayout(){
+  // default to minimal (user choice), unless user explicitly saved another
   try {
     const saved = localStorage.getItem('chorus-layout');
     if (saved && ['classic','minimal','focus'].includes(saved)) setLayout(saved);
-  } catch(e) {}
+    else setLayout('minimal');
+  } catch(e) { setLayout('minimal'); }
 })();
 </script>
 </body>
