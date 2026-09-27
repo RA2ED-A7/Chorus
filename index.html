@@ -206,6 +206,9 @@
   #auth-submit { width:100%; background:var(--accent-grad); border:none; color:white; font-weight:800; font-size:14.5px; padding:11px; border-radius:12px; cursor:pointer; }
   #auth-submit:hover { filter:brightness(1.1); }
   #auth-submit:disabled { opacity:.6; cursor:wait; }
+  #auth-resend { width:100%; margin-top:8px; background:transparent; border:1px solid var(--line); color:var(--text); font-weight:700; font-size:13.5px; padding:10px; border-radius:12px; cursor:pointer; }
+  #auth-resend:hover { border-color:var(--accent); }
+  #auth-resend:disabled { opacity:.6; cursor:wait; }
   .auth-hint { margin-top:12px; font-size:12px; color:var(--muted); text-align:center; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -379,13 +382,14 @@
       <button id="tab-signup" type="button" onclick="setAuthMode('signup')">Sign up</button>
     </div>
     <form id="auth-form" onsubmit="handleAuth(event)">
-      <label>Email<input id="auth-email" type="email" required placeholder="you@example.com" autocomplete="email" /></label>
+      <label>Email<input id="auth-email" type="email" required placeholder="you@real-email.com" autocomplete="email" /></label>
       <label>Password<input id="auth-pass" type="password" required minlength="6" placeholder="Min. 6 characters" autocomplete="current-password" /></label>
       <div id="auth-err"></div>
       <div id="auth-ok"></div>
       <button id="auth-submit" type="submit">Log in</button>
+      <button id="auth-resend" type="button" style="display:none" onclick="resendConfirm()">Resend confirmation email</button>
     </form>
-    <div class="auth-hint">Email + password only. Powered by Supabase.</div>
+    <div class="auth-hint">Use a real email — we'll send you a confirmation link. Powered by Supabase.</div>
   </div>
 </div>
 
@@ -393,7 +397,12 @@
 const SUPABASE_URL = 'https://tlbjqusahpngkjcmeofb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_WvICVdEDq0Rz2AHaJ0CwHw_8CqjumMp';
 let supa = null;
-try { supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error('supabase init failed', e); }
+try {
+  supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true }
+  });
+} catch(e) { console.error('supabase init failed', e); }
+let pendingConfirmEmail = '';
 
 let authMode = 'login';
 let currentUser = null;
@@ -577,24 +586,37 @@ function addDM() {
 }
 
 /* ===== Supabase Auth (email + password) ===== */
+function getEmailRedirect() {
+  // Confirmation link must land back on this app over http(s).
+  // file:// cannot receive the ?code= callback, so omit it there.
+  try {
+    if (window.location.protocol.startsWith('http')) {
+      return window.location.origin + window.location.pathname;
+    }
+  } catch(e) {}
+  return undefined;
+}
 function setAuthMode(mode) {
   authMode = mode;
   document.getElementById('tab-login').classList.toggle('active', mode === 'login');
   document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
   document.getElementById('auth-submit').textContent = mode === 'login' ? 'Log in' : 'Sign up';
+  document.getElementById('auth-resend').style.display = 'none';
   hideAuthMsg();
 }
-function showAuthErr(msg) {
+function showAuthErr(msg, showResend) {
   const el = document.getElementById('auth-err');
   el.style.display = 'block';
   el.textContent = msg;
   document.getElementById('auth-ok').style.display = 'none';
+  if (showResend) document.getElementById('auth-resend').style.display = 'block';
 }
-function showAuthOk(msg) {
+function showAuthOk(msg, showResend) {
   const el = document.getElementById('auth-ok');
   el.style.display = 'block';
   el.textContent = msg;
   document.getElementById('auth-err').style.display = 'none';
+  document.getElementById('auth-resend').style.display = showResend ? 'block' : 'none';
 }
 function hideAuthMsg() {
   document.getElementById('auth-err').style.display = 'none';
@@ -603,32 +625,94 @@ function hideAuthMsg() {
 async function handleAuth(e) {
   e.preventDefault();
   hideAuthMsg();
+  document.getElementById('auth-resend').style.display = 'none';
   if (!supa) { showAuthErr('Auth not ready — check network / supabase-js CDN.'); return; }
   const email = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-pass').value;
+  if (!email || password.length < 6) { showAuthErr('Enter a real email and a password of 6+ characters.'); return; }
   const btn = document.getElementById('auth-submit');
   btn.disabled = true;
-  btn.textContent = authMode === 'login' ? 'Logging in…' : 'Signing up…';
+  btn.textContent = authMode === 'login' ? 'Logging in…' : 'Creating account…';
   try {
     if (authMode === 'signup') {
-      const { data, error } = await supa.auth.signUp({ email, password });
+      const { data, error } = await supa.auth.signUp({
+        email, password, options: { emailRedirectTo: getEmailRedirect() }
+      });
       if (error) throw error;
       if (data.session) {
-        showAuthOk('Account created — welcome!');
+        showAuthOk('Account created — welcome! No confirmation needed on this project.');
       } else {
-        showAuthOk('Account created! Check your email to confirm, then Log in.');
-        setAuthMode('login');
+        pendingConfirmEmail = email;
+        showAuthOk('Account created! We sent a confirmation link to ' + email + '. Open it, then come back and log in.', true);
       }
     } else {
       const { error } = await supa.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('not confirmed') || msg.includes('confirm') || msg.includes('verify')) {
+          pendingConfirmEmail = email;
+          throw new Error('Email not confirmed yet. Check your inbox (and spam) for the link, then resend if needed.');
+        }
+        throw error;
+      }
     }
   } catch (err) {
-    showAuthErr(err.message || 'Auth failed.');
+    const needsResend = /confirm|verify/i.test(err.message || '');
+    if (needsResend && authMode === 'login') pendingConfirmEmail = document.getElementById('auth-email').value.trim();
+    showAuthErr(err.message || 'Auth failed.', needsResend && authMode === 'login');
   } finally {
     btn.disabled = false;
     btn.textContent = authMode === 'login' ? 'Log in' : 'Sign up';
   }
+}
+async function resendConfirm() {
+  hideAuthMsg();
+  if (!supa) { showAuthErr('Auth not ready.'); return; }
+  const email = pendingConfirmEmail || document.getElementById('auth-email').value.trim();
+  if (!email) { showAuthErr('Type your email first, then resend.'); return; }
+  const btn = document.getElementById('auth-resend');
+  btn.disabled = true;
+  try {
+    const { error } = await supa.auth.resend({ type: 'signup', email, options: { emailRedirectTo: getEmailRedirect() } });
+    if (error) throw error;
+    showAuthOk('Confirmation email re-sent to ' + email + '. Check inbox + spam.', true);
+  } catch (err) {
+    showAuthErr(err.message || 'Could not resend.', true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+// Handles the ?code= callback after the user clicks the email link.
+async function handleEmailLink() {
+  try {
+    const url = new URL(window.location.href);
+    const errDesc = url.searchParams.get('error_description') || url.searchParams.get('error');
+    if (errDesc) {
+      setAuthMode('login');
+      showAuthErr('Confirmation link problem: ' + errDesc + ' — try resending.');
+      return true;
+    }
+    const code = url.searchParams.get('code');
+    if (code && supa) {
+      const { error } = await supa.auth.exchangeCodeForSession(code);
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '') + url.hash);
+      if (error) {
+        setAuthMode('login');
+        showAuthErr('This confirmation link expired or was already used. Log in or resend a fresh one.', true);
+      } else {
+        showAuthOk('Email confirmed — you are in!');
+      }
+      return true;
+    }
+    if (window.location.hash.includes('access_token')) {
+      // Implicit flow fallback: supabase-js picks up the session automatically.
+      window.history.replaceState({}, '', url.pathname + url.search);
+      showAuthOk('Email confirmed — you are in!');
+      return true;
+    }
+  } catch(e) { console.error('email link handling failed', e); }
+  return false;
 }
 function setUser(user) {
   currentUser = user || null;
@@ -653,11 +737,13 @@ async function logout() {
   setUser(null);
 }
 
-(function init(){
+(async function init(){
   setScope('server');
   try { localStorage.removeItem('chorus-layout'); } catch(e) {}
   if (!supa) { setUser(null); showAuthErr('Could not load Supabase. Check internet connection.'); return; }
-  supa.auth.getSession().then(({ data }) => setUser(data.session?.user || null));
+  await handleEmailLink();
+  const { data } = await supa.auth.getSession();
+  setUser(data.session?.user || null);
   supa.auth.onAuthStateChange((_evt, session) => setUser(session?.user || null));
 })();
 </script>
