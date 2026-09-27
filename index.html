@@ -5,118 +5,217 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Chorus — Find Your Voice</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Inter, sans-serif; }
-  :root {
-    --bg-deep: #0e1015;
-    --bg-side: #151821;
-    --bg-mid: #1a1e2a;
-    --bg-chat: #12141c;
-    --accent: #7c5cff;
-    --accent-2: #00d8a7;
-    --text: #e3e5eb;
-    --muted: #8b90a1;
-    --bubble: #1f2432;
-    --bubble-own: #2e2a6b;
-  }
-  body { background: var(--bg-deep); color: var(--text); height: 100vh; overflow: hidden; display: flex; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
+  html, body { height: 100%; }
 
-  /* 1. SERVER RAIL - CHANGE: squircles + left indicator bar */
+  /* ===== THEME TOKENS ===== */
+  body[data-layout="classic"] {
+    --bg-deep: #0a1120;
+    --bg-side: #0f1830;
+    --bg-mid: #16213a;
+    --bg-chat: #0b1326;
+    --line: #1e2a47;
+    --accent: #3b82f6;
+    --accent-2: #38bdf8;
+    --accent-grad: linear-gradient(135deg, #3b82f6, #38bdf8);
+    --text: #e8eefb;
+    --muted: #8b96b3;
+    --bubble: #182645;
+    --bubble-own: #1d4ed8;
+    --bubble-text: #d9e2f5;
+  }
+  body[data-layout="minimal"] {
+    --bg-deep: #eef2f7;
+    --bg-side: #ffffff;
+    --bg-mid: #f1f5f9;
+    --bg-chat: #f8fafc;
+    --line: #e2e8f0;
+    --accent: #2563eb;
+    --accent-2: #0ea5e9;
+    --accent-grad: linear-gradient(135deg, #2563eb, #0ea5e9);
+    --text: #0f172a;
+    --muted: #64748b;
+    --bubble: transparent;
+    --bubble-own: #eff6ff;
+    --bubble-text: #334155;
+  }
+  body[data-layout="focus"] {
+    --bg-deep: #060a18;
+    --bg-side: rgba(255,255,255,.05);
+    --bg-mid: rgba(255,255,255,.07);
+    --bg-chat: transparent;
+    --line: rgba(255,255,255,.1);
+    --accent: #60a5fa;
+    --accent-2: #a78bfa;
+    --accent-grad: linear-gradient(135deg, #3b82f6, #a78bfa);
+    --text: #eef2ff;
+    --muted: #8f9bb8;
+    --bubble: rgba(255,255,255,.07);
+    --bubble-own: linear-gradient(135deg, #2563eb, #7c3aed);
+    --bubble-text: #dbe2f5;
+  }
+
+  body {
+    background: var(--bg-deep); color: var(--text);
+    height: 100vh; overflow: hidden; display: flex;
+    transition: background .25s, color .25s;
+  }
+  /* Focus ambient glow */
+  body[data-layout="focus"] {
+    background:
+      radial-gradient(800px 500px at 20% 0%, rgba(59,130,246,.22), transparent 60%),
+      radial-gradient(700px 500px at 90% 20%, rgba(167,139,250,.18), transparent 60%),
+      radial-gradient(600px 600px at 50% 100%, rgba(56,189,248,.12), transparent 60%),
+      #060a18;
+  }
+
+  /* ===== 1. SERVER RAIL ===== */
   .servers {
     width: 78px; background: var(--bg-deep); display: flex; flex-direction: column;
-    align-items: center; padding: 12px 0; gap: 10px; border-right: 1px solid #222633;
+    align-items: center; padding: 12px 0; gap: 10px;
+    border-right: 1px solid var(--line); flex-shrink: 0; z-index: 2;
   }
   .servers .logo {
-    width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    width: 48px; height: 48px; background: var(--accent-grad);
     border-radius: 16px; display: grid; place-items: center; font-weight: 900; font-size: 22px;
-    cursor: pointer; box-shadow: 0 4px 16px rgba(124,92,255,.4);
+    cursor: pointer; color: white; box-shadow: 0 4px 20px rgba(59,130,246,.45);
   }
-  .sep { width: 32px; height: 2px; background: #262b3a; border-radius: 2px; }
+  .sep { width: 32px; height: 2px; background: var(--line); border-radius: 2px; }
   .srv {
     width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center;
-    font-weight: 700; font-size: 18px; cursor: pointer; background: var(--bg-mid); color: #c6c9d6;
-    transition: .18s; position: relative; border: 2px solid transparent;
+    font-weight: 700; font-size: 18px; cursor: pointer; background: var(--bg-mid); color: var(--text);
+    transition: .18s; position: relative; border: 2px solid transparent; opacity: .85;
   }
-  .srv:hover { border-radius: 12px; background: #262c40; transform: translateY(-1px); }
-  .srv.active { background: linear-gradient(135deg, #342f7d, #16685c); color: white; border-color: var(--accent-2); }
+  .srv:hover { border-radius: 12px; transform: translateY(-1px); opacity: 1; }
+  .srv.active { background: var(--accent-grad); color: white; border-color: transparent; opacity: 1; }
   .srv.active::before {
     content:""; position:absolute; left:-15px; width:4px; height:28px;
     background: var(--accent-2); border-radius: 4px;
   }
-  .srv.add { border: 2px dashed #333a52; color: var(--accent-2); background: transparent; }
+  .srv.add { border: 2px dashed var(--line); color: var(--accent-2); background: transparent; }
 
-  /* 2. CHANNELS - CHANGE: rounded cards + section labels */
-  .channels { width: 260px; background: var(--bg-side); display: flex; flex-direction: column; }
-  .server-head {
-    padding: 16px; font-weight: 800; font-size: 16px; border-bottom: 1px solid #222633;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .server-head span.badge { font-size: 11px; background: linear-gradient(90deg,var(--accent),var(--accent-2)); padding: 3px 9px; border-radius: 20px; color:white; }
+  /* ===== 2. CHANNELS ===== */
+  .channels { width: 260px; background: var(--bg-side); display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid var(--line); }
+  .server-head { padding: 16px; font-weight: 800; font-size: 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .server-head span.badge { font-size: 11px; background: var(--accent-grad); padding: 3px 9px; border-radius: 20px; color:white; letter-spacing:.02em; }
   .chan-list { padding: 12px 10px; flex: 1; overflow-y: auto; }
   .cat { font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 14px 6px 6px; display:flex; justify-content:space-between; }
-  .chan {
-    padding: 8px 10px; border-radius: 10px; color: var(--muted); cursor: pointer;
-    display: flex; align-items: center; gap: 8px; font-size: 14.5px; margin-bottom: 2px;
-  }
-  .chan:hover { background: #1f2432; color: var(--text); }
-  .chan.active { background: #252b42; color: white; }
+  .chan { padding: 8px 10px; border-radius: 10px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14.5px; margin-bottom: 2px; transition:.15s; }
+  .chan:hover { background: var(--bg-mid); color: var(--text); }
+  .chan.active { background: var(--bg-mid); color: var(--text); font-weight:600; }
+  body[data-layout="classic"] .chan.active { background: #1c2947; color: white; }
   .chan.active .dot { width:8px; height:8px; background: var(--accent-2); border-radius:50%; margin-left:auto; }
-  .voice-user { display:flex; align-items:center; gap:8px; padding:4px 10px 4px 34px; font-size:13px; color:#b9bdd0; }
+  .voice-user { display:flex; align-items:center; gap:8px; padding:4px 10px 4px 34px; font-size:13px; color:var(--muted); }
   .voice-user img { width:22px; height:22px; border-radius:8px; }
-  /* CHANGE: floating user card instead of flat bar */
-  .me {
-    margin:10px; background:var(--bg-mid); border-radius:14px; padding:10px;
-    display:flex; align-items:center; gap:10px; border:1px solid #262c40;
-  }
-  .me .avatar { width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,#ff8a5c,#ff3d81); display:grid; place-items:center; font-weight:800; }
+  .me { margin:10px; background:var(--bg-mid); border-radius:14px; padding:10px; display:flex; align-items:center; gap:10px; border:1px solid var(--line); }
+  .me .avatar { width:36px; height:36px; border-radius:12px; background:var(--accent-grad); display:grid; place-items:center; font-weight:800; color:white; }
   .me small { color:var(--accent-2); font-size:12px; }
   .me .icons { margin-left:auto; color:var(--muted); display:flex; gap:10px; cursor:pointer; }
 
-  /* 3. CHAT - CHANGE: bubble messages */
-  .chat { flex:1; background:var(--bg-chat); display:flex; flex-direction:column; }
-  .chat-head {
-    padding:14px 18px; border-bottom:1px solid #222633; display:flex; align-items:center; gap:10px;
-    font-weight:700;
+  /* ===== 3. CHAT ===== */
+  .chat { flex:1; background:var(--bg-chat); display:flex; flex-direction:column; min-width:0; }
+  .chat-head { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; font-weight:700; }
+  .chat-head .topic { color:var(--muted); font-weight:400; font-size:13px; border-left:1px solid var(--line); padding-left:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chat-head .right { margin-left:auto; color:var(--muted); display:flex; gap:14px; cursor:pointer; align-items:center; }
+
+  /* Layout switcher — small segmented pill */
+  .layout-switch {
+    display:flex; background:var(--bg-mid); border:1px solid var(--line);
+    border-radius:999px; padding:3px; gap:2px; margin-right:6px;
   }
-  .chat-head .topic { color:var(--muted); font-weight:400; font-size:13px; border-left:1px solid #333; padding-left:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .chat-head .right { margin-left:auto; color:var(--muted); display:flex; gap:14px; cursor:pointer; }
+  .layout-switch button {
+    border:none; background:transparent; color:var(--muted);
+    font-size:12px; font-weight:700; padding:5px 11px; border-radius:999px;
+    cursor:pointer; transition:.18s; white-space:nowrap;
+  }
+  .layout-switch button:hover { color:var(--text); }
+  .layout-switch button.active { background:var(--accent-grad); color:white; box-shadow:0 2px 10px rgba(59,130,246,.4); }
+
   .messages { flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:14px; }
   .msg { display:flex; gap:12px; max-width:78%; }
   .msg .pic { width:40px; height:40px; border-radius:14px; flex-shrink:0; display:grid; place-items:center; font-weight:800; color:white; }
-  .bubble { background:var(--bubble); padding:10px 14px; border-radius:4px 16px 16px 16px; }
+  .bubble { background:var(--bubble); padding:10px 14px; border-radius:4px 16px 16px 16px; border:1px solid transparent; }
+  body[data-layout="classic"] .bubble { border-color: rgba(255,255,255,.06); }
   .bubble .head { display:flex; gap:8px; align-items:baseline; margin-bottom:4px; }
   .bubble .head b { font-size:14px; }
   .bubble .head span { font-size:11px; color:var(--muted); }
-  .bubble p { font-size:14.5px; line-height:1.45; color:#d6d9e3; }
+  .bubble p { font-size:14.5px; line-height:1.45; color:var(--bubble-text); }
   .msg.own { align-self:flex-end; flex-direction:row-reverse; }
   .msg.own .bubble { background:var(--bubble-own); border-radius:16px 4px 16px 16px; }
+  body[data-layout="classic"] .msg.own .bubble p { color: white; }
+  body[data-layout="focus"] .msg.own .bubble p { color: white; }
   .msg.own .pic { border-radius:50%; }
 
-  /* CHANGE: floating pill input */
   .input-wrap { padding:16px 18px; }
-  .input-bar {
-    background:var(--bg-mid); border-radius:18px; display:flex; align-items:center; padding:6px 6px 6px 16px;
-    border:1px solid #2a3046;
-  }
+  .input-bar { background:var(--bg-mid); border-radius:18px; display:flex; align-items:center; padding:6px 6px 6px 16px; border:1px solid var(--line); }
   .input-bar:focus-within { border-color: var(--accent); }
   .input-bar input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-size:14.5px; padding:10px 0; }
-  .input-bar button {
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); border:none; color:white; width:38px; height:38px; border-radius:12px;
-    font-size:18px; cursor:pointer;
-  }
-  .input-bar button:hover { filter:brightness(1.15); }
+  .input-bar input::placeholder { color: var(--muted); }
+  .input-bar button { background: var(--accent-grad); border:none; color:white; width:38px; height:38px; border-radius:12px; font-size:18px; cursor:pointer; }
+  .input-bar button:hover { filter:brightness(1.12); }
 
-  /* 4. MEMBERS */
-  .members { width:240px; background:var(--bg-side); padding:16px 12px; overflow-y:auto; border-left:1px solid #222633; }
+  /* ===== 4. MEMBERS ===== */
+  .members { width:240px; background:var(--bg-side); padding:16px 12px; overflow-y:auto; border-left:1px solid var(--line); flex-shrink:0; }
   .members h4 { font-size:11px; color:var(--muted); letter-spacing:.06em; margin:10px 6px; }
   .member { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; cursor:pointer; }
-  .member:hover { background:#1f2432; }
+  .member:hover { background:var(--bg-mid); }
   .member .wrap { position:relative; }
   .member .wrap .ava { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:14px; color:white; }
   .status { position:absolute; bottom:-1px; right:-1px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg-side); }
-  .on { background:#2ecc71; } .idle { background:#f1c40f; } .busy { background:#e74c3c; } .off { background:#747f8d; }
+  .on { background:#22c55e; } .idle { background:#f59e0b; } .busy { background:#ef4444; } .off { background:#94a3b8; }
+
+  /* ===== LAYOUT: MINIMAL (light, compact, Slack-like) ===== */
+  body[data-layout="minimal"] .servers { width:64px; background:#fff; }
+  body[data-layout="minimal"] .servers .logo { border-radius:12px; width:42px; height:42px; font-size:19px; }
+  body[data-layout="minimal"] .srv { width:42px; height:42px; border-radius:50%; background:#f1f5f9; font-size:15px; border:none; }
+  body[data-layout="minimal"] .srv.active { border-radius:14px; }
+  body[data-layout="minimal"] .srv.active::before { display:none; }
+  body[data-layout="minimal"] .channels { width:230px; background:#fff; }
+  body[data-layout="minimal"] .chan { border-radius:8px; }
+  body[data-layout="minimal"] .chan.active { background:#eff6ff; color:var(--accent); }
+  body[data-layout="minimal"] .chan.active .dot { background:var(--accent); }
+  body[data-layout="minimal"] .me { background:#f8fafc; border-color:var(--line); border-radius:12px; }
+  body[data-layout="minimal"] .members { display:none; }
+  body[data-layout="minimal"] .messages { gap:2px; padding:12px 20px; }
+  body[data-layout="minimal"] .msg { max-width:100%; padding:8px 10px; border-radius:10px; }
+  body[data-layout="minimal"] .msg:hover { background:#fff; }
+  body[data-layout="minimal"] .msg .pic { width:34px; height:34px; border-radius:50%; font-size:14px; }
+  body[data-layout="minimal"] .bubble { background:transparent; padding:0; border:none; }
+  body[data-layout="minimal"] .bubble p { color:#334155; }
+  body[data-layout="minimal"] .msg.own { align-self:stretch; flex-direction:row; }
+  body[data-layout="minimal"] .msg.own .bubble { background:transparent; border-radius:0; }
+  body[data-layout="minimal"] .msg.own .pic { border-radius:50%; }
+  body[data-layout="minimal"] .input-wrap { padding:12px 20px 18px; background:var(--bg-chat); }
+  body[data-layout="minimal"] .input-bar { background:#fff; border-radius:12px; box-shadow:0 1px 2px rgba(15,23,42,.06); }
+  body[data-layout="minimal"] .chat-head { background:#fff; }
+
+  /* ===== LAYOUT: FOCUS (premium centered, glassy) ===== */
+  body[data-layout="focus"] .servers { background:transparent; border:none; width:70px; }
+  body[data-layout="focus"] .srv { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(10px); color:#dbe2f5; }
+  body[data-layout="focus"] .srv.active::before { display:none; }
+  body[data-layout="focus"] .srv.active { box-shadow:0 0 0 2px rgba(96,165,250,.6), 0 4px 20px rgba(59,130,246,.4); }
+  body[data-layout="focus"] .channels { background:var(--bg-side); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:14px 0 14px 4px; border-right:1px solid var(--line); width:250px; overflow:hidden; }
+  body[data-layout="focus"] .members { display:none; }
+  body[data-layout="focus"] .chat { background:transparent; align-items:center; }
+  body[data-layout="focus"] .chat-head {
+    width:min(860px, 94%); background:rgba(255,255,255,.06); backdrop-filter:blur(16px);
+    border:1px solid var(--line); border-radius:16px; margin:14px 0 0; padding:12px 16px;
+  }
+  body[data-layout="focus"] .chat-head .topic { display:none; }
+  body[data-layout="focus"] .messages { width:min(860px, 94%); background:rgba(255,255,255,.04); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:12px 0; padding:24px 22px; }
+  body[data-layout="focus"] .bubble { backdrop-filter:blur(8px); border-color:rgba(255,255,255,.08); border-radius:6px 18px 18px 18px; box-shadow:0 4px 20px rgba(0,0,0,.25); }
+  body[data-layout="focus"] .msg { max-width:85%; }
+  body[data-layout="focus"] .input-wrap { width:min(860px, 94%); padding:0 0 18px; background:transparent; }
+  body[data-layout="focus"] .input-bar { background:rgba(255,255,255,.08); backdrop-filter:blur(16px); border-radius:999px; padding-left:20px; border-color:rgba(255,255,255,.14); box-shadow:0 8px 32px rgba(59,130,246,.25); }
+  body[data-layout="focus"] .input-bar button { border-radius:50%; }
+  body[data-layout="focus"] .me { background:rgba(255,255,255,.06); }
+  body[data-layout="focus"] .layout-switch { background:rgba(255,255,255,.08); }
+
+  ::-webkit-scrollbar { width:8px; }
+  ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
 </style>
 </head>
-<body>
+<body data-layout="classic">
 
 <div class="servers">
   <div class="logo" title="Chorus">C</div>
@@ -137,7 +236,7 @@
     <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
     <div class="cat">VOICE CHANNELS <span>+</span></div>
     <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
-    <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#2ecc71">●</small></div>
+    <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
     <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
     <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
   </div>
@@ -152,19 +251,26 @@
   <div class="chat-head">
     <span style="color:var(--muted)">#</span> <span id="chanName">general</span>
     <span class="topic">Welcome to Chorus — every voice matters</span>
-    <div class="right"><span>📌</span><span>👥</span><span>🔍</span></div>
+    <div class="right">
+      <div class="layout-switch" title="Switch layout">
+        <button data-layout-btn="classic" class="active" onclick="setLayout('classic')">Classic</button>
+        <button data-layout-btn="minimal" onclick="setLayout('minimal')">Minimal</button>
+        <button data-layout-btn="focus" onclick="setLayout('focus')">Focus</button>
+      </div>
+      <span>📌</span><span>👥</span><span>🔍</span>
+    </div>
   </div>
   <div class="messages" id="msgs">
     <div class="msg">
-      <div class="pic" style="background:#6c5cff">N</div>
-      <div class="bubble"><div class="head"><b style="color:#9d94ff">Nova</b><span>Today at 4:12 PM</span></div><p>Anyone up for ranked tonight? Need 1 more 🏆</p></div>
+      <div class="pic" style="background:#3b82f6">N</div>
+      <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Nova</b><span>Today at 4:12 PM</span></div><p>Anyone up for ranked tonight? Need 1 more 🏆</p></div>
     </div>
     <div class="msg">
-      <div class="pic" style="background:#00b894">K</div>
-      <div class="bubble"><div class="head"><b style="color:#00d8a7">Kai</b><span>Today at 4:15 PM</span></div><p>I'm in! Just finished my setup, new mic sounds clean?</p></div>
+      <div class="pic" style="background:#0ea5e9">K</div>
+      <div class="bubble"><div class="head"><b style="color:var(--accent-2)">Kai</b><span>Today at 4:15 PM</span></div><p>I'm in! Just finished my setup, new mic sounds clean?</p></div>
     </div>
     <div class="msg own">
-      <div class="pic" style="background:linear-gradient(135deg,#ff8a5c,#ff3d81)">Y</div>
+      <div class="pic" style="background:var(--accent-grad)">Y</div>
       <div class="bubble"><div class="head"><b>You</b><span>Today at 4:16 PM</span></div><p>Lets gooo, invite me when lobby opens 🔥</p></div>
     </div>
   </div>
@@ -179,13 +285,13 @@
 
 <div class="members">
   <h4>ONLINE — 4</h4>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#6c5cff">N</div><div class="status on"></div></div><span>Nova</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#00b894">K</div><div class="status on"></div></div><span>Kai</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#e67e22">M</div><div class="status idle"></div></div><span>Mira</span></div>
-  <div class="member"><div class="wrap"><div class="ava" style="background:#e84393">Z</div><div class="status busy"></div></div><span>Zed</span></div>
+  <div class="member"><div class="wrap"><div class="ava" style="background:#3b82f6">N</div><div class="status on"></div></div><span>Nova</span></div>
+  <div class="member"><div class="wrap"><div class="ava" style="background:#0ea5e9">K</div><div class="status on"></div></div><span>Kai</span></div>
+  <div class="member"><div class="wrap"><div class="ava" style="background:#f59e0b">M</div><div class="status idle"></div></div><span>Mira</span></div>
+  <div class="member"><div class="wrap"><div class="ava" style="background:#8b5cf6">Z</div><div class="status busy"></div></div><span>Zed</span></div>
   <h4>OFFLINE — 2</h4>
-  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#636e72">R</div><div class="status off"></div></div><span>Rook</span></div>
-  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#2d3436">J</div><div class="status off"></div></div><span>Juno</span></div>
+  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#64748b">R</div><div class="status off"></div></div><span>Rook</span></div>
+  <div class="member" style="opacity:.6"><div class="wrap"><div class="ava" style="background:#334155">J</div><div class="status off"></div></div><span>Juno</span></div>
 </div>
 
 <script>
@@ -207,13 +313,26 @@ function send() {
   const box = document.getElementById('msgs');
   const div = document.createElement('div');
   div.className = 'msg own';
-  div.innerHTML = `<div class="pic" style="background:linear-gradient(135deg,#ff8a5c,#ff3d81)">Y</div>
+  div.innerHTML = `<div class="pic" style="background:var(--accent-grad)">Y</div>
     <div class="bubble"><div class="head"><b>You</b><span>Just now</span></div><p></p></div>`;
   div.querySelector('p').textContent = inp.value;
   box.appendChild(div);
   inp.value = '';
   box.scrollTop = box.scrollHeight;
 }
+function setLayout(name) {
+  document.body.dataset.layout = name;
+  document.querySelectorAll('[data-layout-btn]').forEach(b => {
+    b.classList.toggle('active', b.dataset.layoutBtn === name);
+  });
+  try { localStorage.setItem('chorus-layout', name); } catch(e) {}
+}
+(function initLayout(){
+  try {
+    const saved = localStorage.getItem('chorus-layout');
+    if (saved && ['classic','minimal','focus'].includes(saved)) setLayout(saved);
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
