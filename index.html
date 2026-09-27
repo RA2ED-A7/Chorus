@@ -8,24 +8,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
   html, body { height: 100%; }
 
-  /* ===== THEME TOKENS ===== */
-  body[data-layout="classic"] {
-    --bg-deep: #0a1120;
-    --bg-side: #0f1830;
-    --bg-mid: #16213a;
-    --bg-chat: #0b1326;
-    --line: #1e2a47;
-    --accent: #3b82f6;
-    --accent-2: #38bdf8;
-    --accent-grad: linear-gradient(135deg, #3b82f6, #38bdf8);
-    --text: #e8eefb;
-    --muted: #8b96b3;
-    --bubble: #182645;
-    --bubble-own: #1d4ed8;
-    --bubble-text: #d9e2f5;
-  }
-  /* Minimal — now DARK mode, compact */
-  body[data-layout="minimal"] {
+  /* ===== THEME — Minimal Dark ===== */
+  :root, body {
     --bg-deep: #0b0e15;
     --bg-side: #11161f;
     --bg-mid: #1a212f;
@@ -40,33 +24,10 @@
     --bubble-own: transparent;
     --bubble-text: #c6cfe3;
   }
-  body[data-layout="focus"] {
-    --bg-deep: #060a18;
-    --bg-side: rgba(255,255,255,.05);
-    --bg-mid: rgba(255,255,255,.07);
-    --bg-chat: transparent;
-    --line: rgba(255,255,255,.1);
-    --accent: #60a5fa;
-    --accent-2: #a78bfa;
-    --accent-grad: linear-gradient(135deg, #3b82f6, #a78bfa);
-    --text: #eef2ff;
-    --muted: #8f9bb8;
-    --bubble: rgba(255,255,255,.07);
-    --bubble-own: linear-gradient(135deg, #2563eb, #7c3aed);
-    --bubble-text: #dbe2f5;
-  }
 
   body {
     background: var(--bg-deep); color: var(--text);
     height: 100vh; overflow: hidden; display: flex;
-    transition: background .25s, color .25s;
-  }
-  body[data-layout="focus"] {
-    background:
-      radial-gradient(800px 500px at 20% 0%, rgba(59,130,246,.22), transparent 60%),
-      radial-gradient(700px 500px at 90% 20%, rgba(167,139,250,.18), transparent 60%),
-      radial-gradient(600px 600px at 50% 100%, rgba(56,189,248,.12), transparent 60%),
-      #060a18;
   }
 
   /* ===== 1. SERVER RAIL ===== */
@@ -104,8 +65,7 @@
   .cat span { cursor:pointer; font-size:14px; }
   .chan { padding: 8px 10px; border-radius: 10px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14.5px; margin-bottom: 2px; transition:.15s; }
   .chan:hover { background: var(--bg-mid); color: var(--text); }
-  .chan.active { background: var(--bg-mid); color: var(--text); font-weight:600; }
-  body[data-layout="classic"] .chan.active { background: #1c2947; color: white; }
+  .chan.active { background: rgba(59,130,246,.16); color: var(--text); font-weight:600; }
   .chan.active .dot { width:8px; height:8px; background: var(--accent-2); border-radius:50%; margin-left:auto; }
   .voice-user { display:flex; align-items:center; gap:8px; padding:4px 10px 4px 34px; font-size:13px; color:var(--muted); }
   .voice-user img { width:22px; height:22px; border-radius:8px; }
@@ -143,24 +103,18 @@
   .chat-head { padding:12px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; font-weight:700; min-height:57px; }
   .chat-head .topic { color:var(--muted); font-weight:400; font-size:13px; border-left:1px solid var(--line); padding-left:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .chat-head .right { margin-left:auto; color:var(--muted); display:flex; gap:14px; cursor:pointer; align-items:center; }
-  .layout-switch { display:flex; background:var(--bg-mid); border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; margin-right:6px; }
-  .layout-switch button { border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:700; padding:5px 11px; border-radius:999px; cursor:pointer; transition:.18s; white-space:nowrap; }
-  .layout-switch button:hover { color:var(--text); }
-  .layout-switch button.active { background:var(--accent-grad); color:white; box-shadow:0 2px 10px rgba(59,130,246,.4); }
 
-  .messages { flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:14px; }
-  .msg { display:flex; gap:12px; max-width:78%; }
-  .msg .pic { width:40px; height:40px; border-radius:14px; flex-shrink:0; display:grid; place-items:center; font-weight:800; color:white; }
-  .bubble { background:var(--bubble); padding:10px 14px; border-radius:4px 16px 16px 16px; border:1px solid transparent; }
-  body[data-layout="classic"] .bubble { border-color: rgba(255,255,255,.06); }
+  .messages { flex:1; overflow-y:auto; padding:12px 20px; display:flex; flex-direction:column; gap:2px; }
+  .msg { display:flex; gap:12px; max-width:100%; padding:8px 10px; border-radius:10px; }
+  .msg:hover { background:rgba(255,255,255,.03); }
+  .msg .pic { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:grid; place-items:center; font-weight:800; color:white; font-size:14px; }
+  .bubble { background:transparent; padding:0; border:none; }
   .bubble .head { display:flex; gap:8px; align-items:baseline; margin-bottom:4px; }
   .bubble .head b { font-size:14px; }
   .bubble .head span { font-size:11px; color:var(--muted); }
   .bubble p { font-size:14.5px; line-height:1.45; color:var(--bubble-text); }
-  .msg.own { align-self:flex-end; flex-direction:row-reverse; }
-  .msg.own .bubble { background:var(--bubble-own); border-radius:16px 4px 16px 16px; }
-  body[data-layout="classic"] .msg.own .bubble p { color: white; }
-  body[data-layout="focus"] .msg.own .bubble p { color: white; }
+  .msg.own { align-self:stretch; flex-direction:row; }
+  .msg.own .bubble { background:transparent; border-radius:0; }
   .msg.own .pic { border-radius:50%; }
 
   .input-wrap { padding:16px 18px; }
@@ -197,8 +151,9 @@
   .icon-btn:hover { border-color:var(--accent); }
   .icon-btn.primary { background:var(--accent-grad); border:none; color:white; }
 
-  /* ===== 4. MEMBERS ===== */
-  .members { width:240px; background:var(--bg-side); padding:16px 12px; overflow-y:auto; border-left:1px solid var(--line); flex-shrink:0; }
+  /* ===== 4. MEMBERS (server scope only) ===== */
+  .members { width:240px; background:var(--bg-side); padding:16px 12px; overflow-y:auto; border-left:1px solid var(--line); flex-shrink:0; display:none; }
+  body[data-scope="server"] .members { display:block; }
   .members h4 { font-size:11px; color:var(--muted); letter-spacing:.06em; margin:10px 6px; }
   .member { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; cursor:pointer; }
   .member:hover { background:var(--bg-mid); }
@@ -207,63 +162,34 @@
   .status { position:absolute; bottom:-1px; right:-1px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg-side); }
   .on { background:#22c55e; } .idle { background:#f59e0b; } .busy { background:#ef4444; } .off { background:#64748b; }
 
-  /* ===== LAYOUT: MINIMAL DARK (compact) ===== */
-  body[data-layout="minimal"] .servers { width:64px; }
-  body[data-layout="minimal"] .servers .logo { border-radius:12px; width:42px; height:42px; font-size:19px; }
-  body[data-layout="minimal"] .srv { width:42px; height:42px; border-radius:50%; font-size:15px; border:none; }
-  body[data-layout="minimal"] .srv.active { border-radius:14px; }
-  body[data-layout="minimal"] .srv.active::before { display:none; }
-  body[data-layout="minimal"] .channels { width:240px; }
-  body[data-layout="minimal"] .chan { border-radius:8px; }
-  body[data-layout="minimal"] .chan.active { background:rgba(59,130,246,.16); color:var(--text); }
-  body[data-layout="minimal"] .chan.active .dot { background:var(--accent-2); }
-  body[data-layout="minimal"] .me { border-radius:12px; }
-  body[data-layout="minimal"] .members { display:none; }
-  body[data-layout="minimal"] .messages { gap:2px; padding:12px 20px; }
-  body[data-layout="minimal"] .msg { max-width:100%; padding:8px 10px; border-radius:10px; }
-  body[data-layout="minimal"] .msg:hover { background:rgba(255,255,255,.03); }
-  body[data-layout="minimal"] .msg .pic { width:34px; height:34px; border-radius:50%; font-size:14px; }
-  body[data-layout="minimal"] .bubble { background:transparent; padding:0; border:none; }
-  body[data-layout="minimal"] .bubble p { color:var(--bubble-text); }
-  body[data-layout="minimal"] .msg.own { align-self:stretch; flex-direction:row; }
-  body[data-layout="minimal"] .msg.own .bubble { background:transparent; border-radius:0; }
-  body[data-layout="minimal"] .msg.own .pic { border-radius:50%; }
-  body[data-layout="minimal"] .input-wrap { padding:12px 20px 18px; background:var(--bg-chat); }
-  body[data-layout="minimal"] .input-bar { border-radius:12px; }
-  body[data-layout="minimal"] #view-friends { padding:18px 20px; }
-  body[data-layout="minimal"] .friend-row { background:var(--bg-side); }
+  /* ===== MINIMAL DARK sizing ===== */
+  .servers { width:64px; }
+  .servers .logo { border-radius:12px; width:42px; height:42px; font-size:19px; }
+  .srv { width:42px; height:42px; border-radius:50%; font-size:15px; border:none; }
+  .srv.active { border-radius:14px; }
+  .srv.active::before { display:none; }
+  .channels { width:240px; }
+  .chan { border-radius:8px; }
+  .me { border-radius:12px; }
+  .input-wrap { padding:12px 20px 18px; background:var(--bg-chat); }
+  .input-bar { border-radius:12px; }
+  #view-friends { padding:18px 20px; }
 
-  /* ===== LAYOUT: FOCUS ===== */
-  body[data-layout="focus"] .servers { background:transparent; border:none; width:70px; }
-  body[data-layout="focus"] .srv { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(10px); color:#dbe2f5; }
-  body[data-layout="focus"] .srv.active::before { display:none; }
-  body[data-layout="focus"] .srv.active { box-shadow:0 0 0 2px rgba(96,165,250,.6), 0 4px 20px rgba(59,130,246,.4); }
-  body[data-layout="focus"] .channels { background:var(--bg-side); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:14px 0 14px 4px; border-right:1px solid var(--line); width:250px; overflow:hidden; }
-  body[data-layout="focus"] .members { display:none; }
-  body[data-layout="focus"] .chat { background:transparent; align-items:center; }
-  body[data-layout="focus"] .chat-head { width:min(860px, 94%); background:rgba(255,255,255,.06); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:16px; margin:14px 0 0; padding:12px 16px; }
-  body[data-layout="focus"] .chat-head .topic { display:none; }
-  body[data-layout="focus"] .messages, body[data-layout="focus"] #view-friends { width:min(860px, 94%); background:rgba(255,255,255,.04); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:20px; margin:12px 0; }
-  body[data-layout="focus"] #view-friends { padding:20px; }
-  body[data-layout="focus"] .bubble { backdrop-filter:blur(8px); border-color:rgba(255,255,255,.08); border-radius:6px 18px 18px 18px; box-shadow:0 4px 20px rgba(0,0,0,.25); }
-  body[data-layout="focus"] .msg { max-width:85%; }
-  body[data-layout="focus"] .input-wrap { width:min(860px, 94%); padding:0 0 18px; background:transparent; }
-  body[data-layout="focus"] .input-bar { background:rgba(255,255,255,.08); backdrop-filter:blur(16px); border-radius:999px; padding-left:20px; border-color:rgba(255,255,255,.14); box-shadow:0 8px 32px rgba(59,130,246,.25); }
-  body[data-layout="focus"] .input-bar button { border-radius:50%; }
-  body[data-layout="focus"] .me { background:rgba(255,255,255,.06); }
-  body[data-layout="focus"] .layout-switch { background:rgba(255,255,255,.08); }
-  body[data-layout="focus"] .friend-row { background:rgba(255,255,255,.05); }
+  /* ===== HOME / SERVER side panels ===== */
+  .side-panel { display:flex; flex-direction:column; flex:1; min-height:0; }
+  .home-search { margin:12px 10px 4px; background:var(--bg-deep); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; color:var(--muted); cursor:text; }
+  .nav-sep { height:1px; background:var(--line); margin:10px 10px 4px; }
 
   ::-webkit-scrollbar { width:8px; }
   ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
 </style>
 </head>
-<body data-layout="minimal">
+<body data-scope="server">
 
 <div class="servers">
-  <div class="logo" title="Chorus" onclick="showChat()">C</div>
+  <div class="logo" title="Chorus Home" onclick="showFriends()">C</div>
   <div class="sep"></div>
-  <div class="srv home" title="Friends / DMs" onclick="showFriends(this)">👥</div>
+  <div class="srv home" id="rail-home" title="Friends / DMs" onclick="showFriends()">👥</div>
   <div class="srv active" onclick="switchServer(this,'Pixel Tavern')">PT</div>
   <div class="srv" onclick="switchServer(this,'Study Den')">SD</div>
   <div class="srv" onclick="switchServer(this,'Movie Night')">🎬</div>
@@ -272,37 +198,48 @@
 </div>
 
 <div class="channels">
-  <div class="server-head"><div id="serverName">Pixel Tavern</div><span class="badge">CHORUS+</span></div>
-  <div class="chan-list">
-    <div class="nav-item" id="nav-friends" onclick="showFriends()"> <div class="ico">👥</div> Friends </div>
-    <div id="server-channels">
-      <div class="cat">TEXT CHANNELS <span>+</span></div>
-      <div class="chan active" onclick="switchChannel(this,'general')">💬 general <div class="dot"></div></div>
-      <div class="chan" onclick="switchChannel(this,'clips')">📸 clips</div>
-      <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
-      <div class="cat">VOICE CHANNELS <span>+</span></div>
-      <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
-      <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
-      <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
-      <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
+  <!-- SERVER SCOPE: like Discord server view, no DMs here -->
+  <div class="side-panel" id="panel-server">
+    <div class="server-head"><div id="serverName">Pixel Tavern</div><span class="badge">CHORUS+</span></div>
+    <div class="chan-list">
+      <div id="server-channels">
+        <div class="cat">TEXT CHANNELS <span>+</span></div>
+        <div class="chan active" onclick="switchChannel(this,'general')">💬 general <div class="dot"></div></div>
+        <div class="chan" onclick="switchChannel(this,'clips')">📸 clips</div>
+        <div class="chan" onclick="switchChannel(this,'looking-for-group')">🎮 looking-for-group</div>
+        <div class="cat">VOICE CHANNELS <span>+</span></div>
+        <div class="chan" onclick="switchChannel(this,'Lobby')">🔊 Lobby</div>
+        <div class="voice-user"><img src="https://i.pravatar.cc/40?img=5" /> Nova <small style="color:#22c55e">●</small></div>
+        <div class="voice-user"><img src="https://i.pravatar.cc/40?img=12" /> Kai</div>
+        <div class="chan" onclick="switchChannel(this,'Grind Room')">🔊 Grind Room</div>
+      </div>
     </div>
-    <div class="cat">DIRECT MESSAGES <span onclick="addDM()">+</span></div>
-    <div id="dm-list">
-      <div class="dm" data-dm="Nova" onclick="openDM('Nova',this)">
-        <div class="dwrap"><div class="dava" style="background:#3b82f6">N</div><div class="dstatus on"></div></div>
-        <span>Nova</span><span class="unread">2</span>
-      </div>
-      <div class="dm" data-dm="Kai" onclick="openDM('Kai',this)">
-        <div class="dwrap"><div class="dava" style="background:#0ea5e9">K</div><div class="status on" style="position:absolute;bottom:-1px;right:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--bg-side);background:#22c55e"></div></div>
-        <span>Kai</span><span class="x">✕</span>
-      </div>
-      <div class="dm" data-dm="Mira" onclick="openDM('Mira',this)">
-        <div class="dwrap"><div class="dava" style="background:#f59e0b">M</div><div class="dstatus idle"></div></div>
-        <span>Mira</span><span class="x">✕</span>
-      </div>
-      <div class="dm" data-dm="Zed" onclick="openDM('Zed',this)">
-        <div class="dwrap"><div class="dava" style="background:#8b5cf6">Z</div><div class="dstatus busy"></div></div>
-        <span>Zed</span><span class="x">✕</span>
+  </div>
+  <!-- HOME SCOPE: Friends + DMs only, like Discord home -->
+  <div class="side-panel" id="panel-home" style="display:none">
+    <div class="home-search">Find or start a conversation</div>
+    <div class="chan-list">
+      <div class="nav-item active" id="nav-friends" onclick="showFriends()"> <div class="ico">👥</div> Friends </div>
+      <div class="nav-item" onclick="addDM()"> <div class="ico">✉️</div> New DM </div>
+      <div class="nav-sep"></div>
+      <div class="cat">DIRECT MESSAGES <span onclick="addDM()">+</span></div>
+      <div id="dm-list">
+        <div class="dm" data-dm="Nova" onclick="openDM('Nova',this)">
+          <div class="dwrap"><div class="dava" style="background:#3b82f6">N</div><div class="dstatus on"></div></div>
+          <span>Nova</span><span class="unread">2</span>
+        </div>
+        <div class="dm" data-dm="Kai" onclick="openDM('Kai',this)">
+          <div class="dwrap"><div class="dava" style="background:#0ea5e9">K</div><div class="dstatus on"></div></div>
+          <span>Kai</span><span class="x">✕</span>
+        </div>
+        <div class="dm" data-dm="Mira" onclick="openDM('Mira',this)">
+          <div class="dwrap"><div class="dava" style="background:#f59e0b">M</div><div class="dstatus idle"></div></div>
+          <span>Mira</span><span class="x">✕</span>
+        </div>
+        <div class="dm" data-dm="Zed" onclick="openDM('Zed',this)">
+          <div class="dwrap"><div class="dava" style="background:#8b5cf6">Z</div><div class="dstatus busy"></div></div>
+          <span>Zed</span><span class="x">✕</span>
+        </div>
       </div>
     </div>
   </div>
@@ -317,14 +254,7 @@
   <div class="chat-head">
     <span id="chat-ico" style="color:var(--muted)">#</span> <span id="chanName">general</span>
     <span class="topic" id="chat-topic">Welcome to Chorus — every voice matters</span>
-    <div class="right">
-      <div class="layout-switch" title="Switch layout">
-        <button data-layout-btn="classic" onclick="setLayout('classic')">Classic</button>
-        <button data-layout-btn="minimal" class="active" onclick="setLayout('minimal')">Minimal</button>
-        <button data-layout-btn="focus" onclick="setLayout('focus')">Focus</button>
-      </div>
-      <span>📌</span><span>👥</span><span>🔍</span>
-    </div>
+    <div class="right"><span>📌</span><span onclick="showFriends()">👥</span><span>🔍</span></div>
   </div>
 
   <!-- CHAT / DM VIEW -->
@@ -422,27 +352,33 @@ const DM_HISTORY = {
   Zed: [{from:'Zed', text:'movie night Friday, you in?', time:'Monday at 12:01 PM'}]
 };
 
-function clearActive() {
-  document.querySelectorAll('.chan').forEach(c=>{c.classList.remove('active'); const d=c.querySelector('.dot'); if(d) d.remove();});
+function setScope(scope) {
+  document.body.dataset.scope = scope;
+  document.getElementById('panel-server').style.display = scope === 'server' ? 'flex' : 'none';
+  document.getElementById('panel-home').style.display = scope === 'home' ? 'flex' : 'none';
+}
+function clearServerActive() {
+  document.querySelectorAll('#server-channels .chan').forEach(c=>{c.classList.remove('active'); const d=c.querySelector('.dot'); if(d) d.remove();});
+}
+function clearDMActive() {
   document.querySelectorAll('.dm').forEach(d=>d.classList.remove('active'));
   document.getElementById('nav-friends').classList.remove('active');
+}
+function clearRail() {
   document.querySelectorAll('.srv').forEach(s=>s.classList.remove('active'));
 }
 function showView(which) {
   document.getElementById('view-chat').style.display = which === 'chat' ? 'flex' : 'none';
   document.getElementById('view-friends').style.display = which === 'friends' ? 'flex' : 'none';
 }
-function showChat() {
-  showView('chat');
-}
 function switchServer(el, name) {
-  clearActive();
+  clearRail(); clearServerActive(); clearDMActive();
   el.classList.add('active');
   document.getElementById('serverName').textContent = name;
-  // default back to first channel
   const first = document.querySelector('#server-channels .chan');
-  if (first) { first.classList.add('active'); }
+  if (first) { first.classList.add('active'); const dot = document.createElement('div'); dot.className='dot'; first.appendChild(dot); }
   currentDM = null;
+  setScope('server');
   document.getElementById('chat-ico').textContent = '#';
   document.getElementById('chanName').textContent = 'general';
   document.getElementById('chat-topic').textContent = 'Welcome to ' + name + ' — every voice matters';
@@ -450,13 +386,11 @@ function switchServer(el, name) {
   showView('chat');
 }
 function switchChannel(el, name) {
-  clearActive();
+  clearServerActive(); clearDMActive();
   el.classList.add('active');
   const dot = document.createElement('div'); dot.className='dot'; el.appendChild(dot);
-  // keep server active visual
-  const srvs = document.querySelectorAll('.srv');
-  if ([...srvs].every(s=>!s.classList.contains('active')) && srvs[1]) srvs[1].classList.add('active');
   currentDM = null;
+  setScope('server');
   document.getElementById('chat-ico').textContent = '#';
   document.getElementById('chanName').textContent = name;
   document.getElementById('chat-topic').textContent = 'Welcome to #' + name;
@@ -464,9 +398,14 @@ function switchChannel(el, name) {
   showView('chat');
 }
 function openDM(name, el) {
-  if (el) { clearActive(); el.classList.add('active'); const u = el.querySelector('.unread'); if (u) u.remove(); }
-  else { clearActive(); const item = document.querySelector(`.dm[data-dm="${name}"]`); if (item) { item.classList.add('active'); const u=item.querySelector('.unread'); if(u) u.remove(); } }
+  clearServerActive(); clearDMActive();
+  if (el) { el.classList.add('active'); const u = el.querySelector('.unread'); if (u) u.remove(); }
+  else { const item = document.querySelector(`.dm[data-dm="${name}"]`); if (item) { item.classList.add('active'); const u=item.querySelector('.unread'); if(u) u.remove(); } }
+  clearRail();
+  document.getElementById('rail-home').classList.add('active');
   currentDM = name;
+  setScope('home');
+  document.getElementById('nav-friends').classList.remove('active');
   document.getElementById('chat-ico').textContent = '@';
   document.getElementById('chanName').textContent = name;
   document.getElementById('chat-topic').textContent = 'Direct message with ' + name;
@@ -516,11 +455,13 @@ function send() {
   box.scrollTop = box.scrollHeight;
 }
 
-/* ===== Friends ===== */
-function showFriends(el) {
-  clearActive();
+/* ===== Friends (home scope, Discord-style) ===== */
+function showFriends() {
+  clearRail(); clearServerActive(); clearDMActive();
+  document.getElementById('rail-home').classList.add('active');
   document.getElementById('nav-friends').classList.add('active');
-  if (el) el.classList.add('active');
+  currentDM = null;
+  setScope('home');
   document.getElementById('chat-ico').textContent = '👥';
   document.getElementById('chanName').textContent = 'Friends';
   document.getElementById('chat-topic').textContent = 'All your friends in one place';
@@ -580,20 +521,11 @@ function addDM() {
   openDM(name, div);
 }
 
-function setLayout(name) {
-  document.body.dataset.layout = name;
-  document.querySelectorAll('[data-layout-btn]').forEach(b => {
-    b.classList.toggle('active', b.dataset.layoutBtn === name);
-  });
-  try { localStorage.setItem('chorus-layout', name); } catch(e) {}
-}
-(function initLayout(){
-  // default to minimal (user choice), unless user explicitly saved another
-  try {
-    const saved = localStorage.getItem('chorus-layout');
-    if (saved && ['classic','minimal','focus'].includes(saved)) setLayout(saved);
-    else setLayout('minimal');
-  } catch(e) { setLayout('minimal'); }
+(function init(){
+  // Default to server scope like Discord lands on last server;
+  // call showFriends() to land on home instead. Keep server default for now.
+  setScope('server');
+  try { localStorage.removeItem('chorus-layout'); } catch(e) {}
 })();
 </script>
 </body>
