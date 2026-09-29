@@ -186,6 +186,13 @@
   .bot-tag { margin-left:auto; font-size:10px; font-weight:800; background:rgba(34,211,238,.12); color:#22d3ee; border:1px solid rgba(34,211,238,.4); padding:2px 6px; border-radius:6px; letter-spacing:.05em; }
   .dm .bot-tag ~ .unread { margin-left:6px; }
   #rail-servers { display:flex; flex-direction:column; gap:10px; align-items:center; }
+  #db-toast {
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:80;
+    display:none; max-width:min(480px, 92vw); background:#3b1d24; color:#fecaca;
+    border:1px solid rgba(248,113,113,.5); border-radius:12px; padding:10px 14px;
+    font-size:13.5px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .req-sub { font-size:12px; color:var(--muted); }
 
   ::-webkit-scrollbar { width:8px; }
   ::-webkit-scrollbar-thumb { background:var(--line); border-radius:8px; }
@@ -304,6 +311,8 @@
   <div id="members-list"><!-- rendered from active server --></div>
 </div>
 
+<div id="db-toast"></div>
+
 <!-- AUTH -->
 <div id="auth-overlay">
   <div class="auth-card">
@@ -383,55 +392,366 @@ function displayName() {
   if (currentUser && currentUser.email) return currentUser.email.split('@')[0];
   return 'you';
 }
-function storeKey() { return 'chorus-data-' + (currentUser && currentUser.id ? currentUser.id : 'guest'); }
-function blankStore() { return { servers: [], dms: [], friends: [], msgs: {}, active: { serverId: null, channel: 'general', dm: null } }; }
+function storeKey() { return 'chorus-prefs-' + (currentUser && currentUser.id ? currentUser.id : 'guest'); }
+function blankStore() { return { servers: [], dms: [], friends: [], pendingIn: [], pendingOut: [], blocked: [], msgs: {}, active: { serverId: null, channel: 'general', dm: null } }; }
 function dmKey(name) { return 'dm:' + String(name).toLowerCase(); }
 function srvKey(id, ch) { return 'srv:' + id + ':' + ch; }
 function activeServer() { return store ? (store.servers.find(s => s.id === currentServerId) || null) : null; }
+function activeChannel() {
+  const srv = activeServer();
+  if (!srv || !srv.channels.length) return null;
+  return srv.channels.find(c => c.name === currentChannel) || srv.channels[0];
+}
+function meId() { return currentUser && currentUser.id; }
 function guardAuth() {
   if (!currentUser) { document.getElementById('auth-overlay').style.display = 'flex'; return false; }
   if (!store) loadStore();
   return true;
 }
+/* Local prefs only: active view, bot chat, unread counters. Everything else lives in Supabase. */
+let pendingUnread = {};
 function loadStore() {
+  store = blankStore();
+  pendingUnread = {};
+  let had = false;
   try {
     const raw = localStorage.getItem(storeKey());
-    store = raw ? Object.assign(blankStore(), JSON.parse(raw)) : blankStore();
-  } catch (e) { store = blankStore(); }
-  if (!Array.isArray(store.servers)) store.servers = [];
-  if (!Array.isArray(store.dms)) store.dms = [];
-  if (!Array.isArray(store.friends)) store.friends = [];
-  if (!store.msgs || typeof store.msgs !== 'object') store.msgs = {};
-  ensureBot();
-  currentServerId = store.active && store.active.serverId;
-  currentChannel = (store.active && store.active.channel) || 'general';
-  currentDM = (store.active && store.active.dm) || null;
-  if (currentServerId && !store.servers.find(s => s.id === currentServerId)) { currentServerId = null; currentDM = null; }
+    if (raw) {
+      const p = JSON.parse(raw);
+      had = true;
+      if (p.active) {
+        currentServerId = p.active.serverId || null;
+        currentChannel = p.active.channel || 'general';
+        currentDM = p.active.dm || null;
+      }
+      if (Array.isArray(p.botMsgs) && p.botMsgs.length) store.msgs[dmKey(BOT_NAME)] = p.botMsgs;
+      if (p.unread && typeof p.unread === 'object') pendingUnread = p.unread;
+    }
+  } catch (e) {}
+  ensureBot(!had);
   saveStore();
 }
 function saveStore() {
   if (!store) return;
-  store.active = { serverId: currentServerId, channel: currentChannel, dm: currentDM };
-  try { localStorage.setItem(storeKey(), JSON.stringify(store)); } catch (e) {}
+  try {
+    localStorage.setItem(storeKey(), JSON.stringify({
+      active: { serverId: currentServerId, channel: currentChannel, dm: currentDM },
+      botMsgs: (store.msgs[dmKey(BOT_NAME)] || []).slice(-100),
+      unread: pendingUnread
+    }));
+  } catch (e) {}
 }
-function ensureBot() {
+function unreadKey(d) { return d.bot ? dmKey(d.name) : 'c:' + d.convoId; }
+function getUnread(d) { return pendingUnread[unreadKey(d)] || 0; }
+function setUnread(d, n) {
+  if (n > 0) pendingUnread[unreadKey(d)] = n;
+  else delete pendingUnread[unreadKey(d)];
+  saveStore();
+}
+function ensureBot(fresh) {
   if (!store.dms.find(d => d.name === BOT_NAME)) {
-    store.dms.unshift({ name: BOT_NAME, color: BOT_COLOR, bot: true, status: 'on', unread: 1 });
+    const b = { name: BOT_NAME, color: BOT_COLOR, bot: true, status: 'on' };
+    store.dms.unshift(b);
+    if (fresh) setUnread(b, 1);
   }
   const k = dmKey(BOT_NAME);
   if (!store.msgs[k] || !store.msgs[k].length) {
     store.msgs[k] = [{ from: BOT_NAME, color: BOT_COLOR, text: 'Hey ' + displayName() + '! I\'m ' + BOT_NAME + ' 🤖 — your built-in test buddy. Send me anything and I\'ll answer instantly. Try "help".', time: 'Today' }];
   }
 }
-function ensureDM(name) {
-  name = String(name).slice(0, 20);
-  let d = store.dms.find(x => x.name.toLowerCase() === name.toLowerCase());
-  if (!d) {
-    d = { name, color: colorFor(name), status: 'on', unread: 0 };
-    store.dms.push(d);
-    if (!store.msgs[dmKey(name)]) store.msgs[dmKey(name)] = [];
+
+/* ---------- Supabase backend ---------- */
+const profCache = {};
+function cacheProfiles(rows) { (rows || []).forEach(p => { if (p && p.id) profCache[p.id] = p; }); }
+async function fetchProfiles(ids) {
+  ids = [...new Set((ids || []).filter(id => id && !profCache[id]))];
+  if (!ids.length || !supa) return;
+  try {
+    const { data, error } = await supa.from('profiles').select('id,username,color,status').in('id', ids);
+    if (!error) cacheProfiles(data);
+  } catch (e) {}
+}
+function profName(id) {
+  if (id === meId()) return 'You';
+  const p = profCache[id];
+  return p ? p.username : '…';
+}
+function profColor(id) {
+  const p = profCache[id];
+  return (p && p.color) || colorFor(profName(id));
+}
+function fmtTime(iso) {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    let h = d.getHours(); const m = ('0' + d.getMinutes()).slice(-2);
+    const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return (sameDay ? 'Today at ' : d.toLocaleDateString() + ' ') + h + ':' + m + ' ' + ap;
+  } catch (e) { return ''; }
+}
+function cloudMsg(r) {
+  const own = r.author_id === meId();
+  return { id: r.id, from: own ? 'You' : profName(r.author_id), color: own ? null : profColor(r.author_id), text: r.body, time: fmtTime(r.created_at) };
+}
+const seenIds = new Set();
+function pushMsg(key, m) {
+  store.msgs[key] = store.msgs[key] || [];
+  if (m.id) {
+    if (seenIds.has(m.id)) return false;
+    seenIds.add(m.id);
   }
-  return d;
+  store.msgs[key].push(m);
+  return true;
+}
+let toastTimer = null;
+function dbToast(msg, ok) {
+  const el = document.getElementById('db-toast');
+  if (!el) { alert(msg); return; }
+  el.textContent = msg;
+  el.style.background = ok ? '#0f2e23' : '#3b1d24';
+  el.style.color = ok ? '#a7f3d0' : '#fecaca';
+  el.style.borderColor = ok ? 'rgba(52,211,153,.5)' : 'rgba(248,113,113,.5)';
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 7000);
+}
+let dbWarned = false;
+function dbMissing(err) {
+  const m = String((err && err.code ? err.code + ' ' : '') + (err && err.message ? err.message : err || '')).toLowerCase();
+  if (m.includes('42p01') || m.includes('does not exist') || m.includes('could not find the table') || m.includes('schema cache')) {
+    if (!dbWarned) { dbWarned = true; dbToast('Database tables not found — run supabase.sql in the Supabase SQL Editor, then reload.'); }
+    return true;
+  }
+  return false;
+}
+async function ensureProfile() {
+  const me = meId();
+  if (!me || !supa) return null;
+  try {
+    const { data, error } = await supa.from('profiles').select('id,username,color,status').eq('id', me).maybeSingle();
+    if (error) { dbMissing(error); return profCache[me] || null; }
+    if (data) {
+      profCache[me] = data;
+      supa.from('profiles').update({ status: 'online' }).eq('id', me).then(() => {}, () => {});
+      return data;
+    }
+    const rawName = (currentUser.user_metadata && currentUser.user_metadata.username) || (currentUser.email || 'user').split('@')[0];
+    const base = (String(rawName).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 20) || 'user');
+    let ins = null;
+    for (let i = 0; i < 5 && !ins; i++) {
+      const uname = i === 0 ? base : (base.slice(0, 15) + '_' + Math.floor(Math.random() * 10000));
+      const { data, error: e2 } = await supa.from('profiles').insert({ id: me, username: uname }).select('id,username,color,status').single();
+      if (!e2) { ins = data; break; }
+      if (dbMissing(e2)) return null;
+      if (String(e2.code) !== '23505' && !/duplicate|unique/i.test(e2.message || '')) {
+        dbToast('Profile setup failed: ' + e2.message);
+        return null;
+      }
+    }
+    if (!ins) { dbToast('Profile setup failed: username taken and retries exhausted.'); return null; }
+    profCache[me] = ins;
+    return ins;
+  } catch (e) { return profCache[me] || null; }
+}
+async function cloudLoadServers() {
+  const { data: servers, error } = await supa.from('servers').select('id,name,owner_id').order('created_at');
+  if (error) { if (!dbMissing(error)) dbToast('Could not load servers: ' + error.message); return; }
+  store.servers = [];
+  for (const s of (servers || [])) {
+    const [chRes, memRes] = await Promise.all([
+      supa.from('channels').select('id,name').eq('server_id', s.id).order('position').order('name'),
+      supa.from('server_members').select('user_id').eq('server_id', s.id)
+    ]);
+    const channels = (!chRes.error && chRes.data) ? chRes.data.map(c => ({ id: c.id, name: c.name })) : [{ id: null, name: 'general' }];
+    const uids = (!memRes.error && memRes.data) ? memRes.data.map(r => r.user_id) : [];
+    await fetchProfiles(uids);
+    store.servers.push({
+      id: s.id, name: s.name, owner_id: s.owner_id, channels,
+      members: uids.map(u => ({
+        id: u,
+        username: (profCache[u] && profCache[u].username) || '…',
+        color: (profCache[u] && profCache[u].color) || colorFor(u),
+        status: (profCache[u] && profCache[u].status) || 'off'
+      }))
+    });
+  }
+  if (currentServerId && !store.servers.find(s => s.id === currentServerId)) { currentServerId = null; currentDM = null; }
+  const srv = activeServer();
+  if (srv && !srv.channels.find(c => c.name === currentChannel)) currentChannel = (srv.channels[0] && srv.channels[0].name) || 'general';
+}
+async function cloudLoadChannelMsgs() {
+  const srv = activeServer();
+  if (!srv) return;
+  const ch = activeChannel();
+  if (!ch || !ch.id) { store.msgs[srvKey(srv.id, currentChannel)] = []; return; }
+  currentChannel = ch.name;
+  const key = srvKey(srv.id, ch.name);
+  try {
+    const { data, error } = await supa.from('messages').select('id,author_id,body,created_at').eq('channel_id', ch.id).order('created_at', { ascending: true }).limit(100);
+    if (error) { if (!dbMissing(error)) dbToast('Could not load messages: ' + error.message); return; }
+    await fetchProfiles((data || []).map(m => m.author_id));
+    store.msgs[key] = [];
+    (data || []).forEach(r => pushMsg(key, cloudMsg(r)));
+  } catch (e) { dbToast('Could not load messages (network?).'); }
+}
+/* ---- realtime ---- */
+let rtSub = null;
+function unsubLive() {
+  if (rtSub && supa) { try { supa.removeChannel(rtSub); } catch (e) {} }
+  rtSub = null;
+}
+function subLive(filter, key, onOther) {
+  unsubLive();
+  if (!supa) return;
+  rtSub = supa.channel('live-' + key.replace(/[^a-z0-9]/gi, '').slice(-40))
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter }, async (payload) => {
+      const r = payload.new;
+      if (!r) return;
+      await fetchProfiles([r.author_id]);
+      if (pushMsg(key, cloudMsg(r))) {
+        if (isViewingKey(key)) renderChat();
+        else if (onOther) onOther(r);
+      }
+    })
+    .subscribe();
+}
+function isViewingKey(key) {
+  if (document.getElementById('view-friends').style.display !== 'none') return false;
+  if (currentDM) return dmKey(currentDM) === key;
+  const srv = activeServer();
+  const ch = activeChannel();
+  return !!srv && !!ch && srvKey(srv.id, ch.name) === key;
+}
+async function bootCloud() {
+  if (!supa || !currentUser) return;
+  await ensureProfile();
+  await cloudLoadServers();
+  await cloudLoadDMs();
+  await cloudLoadFriends();
+  renderAll();
+  if (store.servers.length) {
+    const target = store.servers.find(s => s.id === currentServerId) || store.servers[0];
+    await switchServerById(target.id);
+  } else {
+    showFriends();
+  }
+}
+/* ---- DMs (Supabase conversations; bot stays local) ---- */
+async function cloudLoadDMs() {
+  const me = meId();
+  if (!supa || !me) return;
+  try {
+    const { data: mine, error } = await supa.from('dm_participants').select('conversation_id').eq('user_id', me);
+    if (error) { if (!dbMissing(error)) dbToast('Could not load DMs: ' + error.message); return; }
+    store.dms = store.dms.filter(d => d.bot);
+    const ids = (mine || []).map(r => r.conversation_id);
+    if (!ids.length) { if (currentDM && !store.dms.find(d => d.name === currentDM)) currentDM = null; return; }
+    const { data: parts, error: e2 } = await supa.from('dm_participants').select('conversation_id,user_id').in('conversation_id', ids);
+    if (e2) { dbToast('Could not load DMs: ' + e2.message); return; }
+    const peerIds = [...new Set((parts || []).filter(p => p.user_id !== me).map(p => p.user_id))];
+    await fetchProfiles(peerIds);
+    const byConvo = {};
+    (parts || []).forEach(p => { (byConvo[p.conversation_id] = byConvo[p.conversation_id] || []).push(p.user_id); });
+    Object.keys(byConvo).forEach(cid => {
+      const others = [...new Set(byConvo[cid])].filter(u => u !== me);
+      const peer = others[0] || null;
+      const prof = peer && profCache[peer];
+      const d = {
+        convoId: cid, peerId: peer,
+        name: prof ? prof.username : (others.length > 1 ? 'Group DM' : '…'),
+        color: prof ? (prof.color || colorFor(prof.username)) : colorFor(cid),
+        status: (prof && prof.status === 'online') ? 'on' : 'off'
+      };
+      d.unread = getUnread(d);
+      store.dms.push(d);
+    });
+    if (currentDM && !store.dms.find(d => d.name === currentDM)) currentDM = null;
+  } catch (e) { dbToast('Could not load DMs (network?).'); }
+}
+async function findOrCreateConvo(peerId) {
+  const me = meId();
+  try {
+    const { data: mine } = await supa.from('dm_participants').select('conversation_id').eq('user_id', me);
+    const ids = (mine || []).map(r => r.conversation_id);
+    if (ids.length) {
+      const { data: parts } = await supa.from('dm_participants').select('conversation_id,user_id').in('conversation_id', ids);
+      const byConvo = {};
+      (parts || []).forEach(p => { (byConvo[p.conversation_id] = byConvo[p.conversation_id] || []).push(p.user_id); });
+      for (const cid of Object.keys(byConvo)) {
+        const set = [...new Set(byConvo[cid])];
+        if (set.length === 2 && set.includes(me) && set.includes(peerId)) return cid;
+      }
+    }
+  } catch (e) {}
+  const { data: conv, error: e1 } = await supa.from('dm_conversations').insert({}).select('id').single();
+  if (e1) throw e1;
+  const { error: e2 } = await supa.from('dm_participants').insert([
+    { conversation_id: conv.id, user_id: me },
+    { conversation_id: conv.id, user_id: peerId }
+  ]);
+  if (e2) throw e2;
+  return conv.id;
+}
+async function cloudLoadConvoMsgs(d) {
+  const key = dmKey(d.name);
+  if (!d.convoId) { store.msgs[key] = store.msgs[key] || []; return; }
+  try {
+    const { data, error } = await supa.from('messages').select('id,author_id,body,created_at').eq('conversation_id', d.convoId).order('created_at', { ascending: true }).limit(100);
+    if (error) { dbToast('Could not load messages: ' + error.message); return; }
+    await fetchProfiles((data || []).map(m => m.author_id));
+    store.msgs[key] = [];
+    (data || []).forEach(r => pushMsg(key, cloudMsg(r)));
+  } catch (e) { dbToast('Could not load messages (network?).'); }
+}
+async function lookupProfile(username) {
+  const clean = String(username || '').trim();
+  if (!clean) return null;
+  try {
+    const { data, error } = await supa.from('profiles').select('id,username,color,status').ilike('username', clean).limit(5);
+    if (error) { if (!dbMissing(error)) dbToast('Lookup failed: ' + error.message); return null; }
+    const exact = (data || []).find(p => p.username.toLowerCase() === clean.toLowerCase());
+    return exact || null;
+  } catch (e) { return null; }
+}
+async function cloudLoadFriends() {
+  const me = meId();
+  if (!supa || !me) return;
+  try {
+    const { data: rows, error } = await supa.from('friendships').select('*').or('requester_id.eq.' + me + ',addressee_id.eq.' + me);
+    if (error) { if (!dbMissing(error)) dbToast('Could not load friends: ' + error.message); return; }
+    const peerIds = [...new Set((rows || []).map(r => r.requester_id === me ? r.addressee_id : r.requester_id))];
+    await fetchProfiles(peerIds);
+    store.friends = []; store.pendingIn = []; store.pendingOut = []; store.blocked = [];
+    (rows || []).forEach(r => {
+      const peerId = r.requester_id === me ? r.addressee_id : r.requester_id;
+      const p = profCache[peerId] || {};
+      const entry = {
+        rowId: r.id, peerId,
+        name: p.username || '…',
+        color: p.color || colorFor(peerId),
+        status: p.status || 'off',
+        direction: r.requester_id === me ? 'out' : 'in'
+      };
+      if (r.status === 'accepted') {
+        entry.group = entry.status === 'online' ? 'online' : 'all';
+        entry.sub = entry.status === 'online' ? 'online' : 'offline';
+        store.friends.push(entry);
+      } else if (r.status === 'pending') {
+        entry.group = 'pending';
+        entry.sub = entry.direction === 'in' ? 'wants to be friends' : 'request sent';
+        (entry.direction === 'in' ? store.pendingIn : store.pendingOut).push(entry);
+      } else if (r.status === 'blocked') {
+        entry.group = 'blocked';
+        entry.sub = 'blocked';
+        store.blocked.push(entry);
+      }
+    });
+  } catch (e) { dbToast('Could not load friends (network?).'); }
+}
+async function refreshFriends() {
+  await cloudLoadFriends();
+  renderFriends();
 }
 
 function setScope(scope) {
@@ -493,11 +813,11 @@ function renderServerPanel() {
   box.appendChild(cat);
   srv.channels.forEach(ch => {
     const c = document.createElement('div');
-    c.className = 'chan' + (ch === currentChannel ? ' active' : '');
-    const lab = document.createElement('span'); lab.textContent = '💬 ' + ch;
+    c.className = 'chan' + (ch.name === currentChannel ? ' active' : '');
+    const lab = document.createElement('span'); lab.textContent = '💬 ' + ch.name;
     c.appendChild(lab);
-    if (ch === currentChannel) { const dot = document.createElement('div'); dot.className = 'dot'; c.appendChild(dot); }
-    c.onclick = () => switchChannelByName(ch);
+    if (ch.name === currentChannel) { const dot = document.createElement('div'); dot.className = 'dot'; c.appendChild(dot); }
+    c.onclick = () => switchChannelByName(ch.name);
     box.appendChild(c);
   });
 }
@@ -521,7 +841,8 @@ function renderDMs() {
     const nm = document.createElement('span'); nm.textContent = d.name;
     row.append(w, nm);
     if (d.bot) { const tag = document.createElement('span'); tag.className = 'bot-tag'; tag.textContent = 'BOT'; row.appendChild(tag); }
-    if (d.unread) { const u = document.createElement('span'); u.className = 'unread'; u.textContent = d.unread > 9 ? '9+' : d.unread; row.appendChild(u); }
+    const un = getUnread(d);
+    if (un) { const u = document.createElement('span'); u.className = 'unread'; u.textContent = un > 9 ? '9+' : un; row.appendChild(u); }
     row.onclick = () => openDM(d.name);
     list.appendChild(row);
   });
@@ -530,23 +851,45 @@ function renderFriends() {
   const box = document.getElementById('friends-list');
   box.innerHTML = '';
   const empty = document.createElement('div'); empty.id = 'friends-empty'; empty.style.display = 'none';
-  if (!store.friends.length) {
+  const on = store.friends.filter(f => f.group === 'online');
+  const off = store.friends.filter(f => f.group !== 'online');
+  if (!store.friends.length && !store.pendingIn.length && !store.pendingOut.length && !store.blocked.length) {
     const e = document.createElement('div'); e.className = 'empty';
     const t = document.createElement('div'); t.className = 'empty-t'; t.textContent = 'No friends yet';
-    const s = document.createElement('div'); s.className = 'empty-s'; s.textContent = 'Add a friend to start building your circle.';
+    const s = document.createElement('div'); s.className = 'empty-s'; s.textContent = 'Add a friend by exact username to start building your circle.';
     const b = document.createElement('button'); b.className = 'add-btn'; b.textContent = '+ Add Friend'; b.onclick = addFriend;
     e.append(t, s, b);
     box.append(e, empty);
     return;
   }
-  const on = store.friends.filter(f => f.group === 'online');
-  const off = store.friends.filter(f => f.group !== 'online');
-  const h1 = document.createElement('h4'); h1.textContent = 'ONLINE — ' + on.length;
+  if (store.pendingIn.length) {
+    const h = document.createElement('h4'); h.textContent = 'REQUESTS — ' + store.pendingIn.length;
+    box.appendChild(h);
+    store.pendingIn.forEach((f, i) => box.appendChild(requestRow(f, i === 0)));
+  }
+  const h1 = document.createElement('h4');
+  if (store.pendingIn.length) h1.style.marginTop = '14px';
+  h1.textContent = 'ONLINE — ' + on.length;
   box.appendChild(h1);
-  on.forEach((f, i) => box.appendChild(friendRow(f, i === 0)));
+  on.forEach((f, i) => box.appendChild(friendRow(f, i === 0 && !store.pendingIn.length)));
   const h2 = document.createElement('h4'); h2.style.marginTop = '14px'; h2.textContent = 'OFFLINE — ' + off.length;
   box.appendChild(h2);
   off.forEach(f => { const r = friendRow(f, false); r.style.opacity = '.75'; box.appendChild(r); });
+  if (store.pendingOut.length) {
+    const h3 = document.createElement('h4'); h3.style.marginTop = '14px'; h3.textContent = 'SENT — ' + store.pendingOut.length;
+    box.appendChild(h3);
+    store.pendingOut.forEach(f => box.appendChild(sentRow(f)));
+  }
+  store.blocked.forEach(f => {
+    const r = friendRow(f, false);
+    r.dataset.group = 'blocked';
+    r.style.opacity = '.75';
+    const acts = r.querySelector('.acts');
+    acts.innerHTML = '';
+    const unb = document.createElement('button'); unb.className = 'icon-btn'; unb.title = 'Unblock'; unb.textContent = '↩'; unb.onclick = () => unblockUser(f.rowId);
+    acts.appendChild(unb);
+    box.appendChild(r);
+  });
   box.appendChild(empty);
 }
 function friendRow(f, first) {
@@ -563,10 +906,67 @@ function friendRow(f, first) {
   info.append(fn, fs);
   const acts = document.createElement('div'); acts.className = 'acts';
   const msg = document.createElement('button'); msg.className = 'icon-btn primary'; msg.title = 'Message'; msg.textContent = '💬'; msg.onclick = () => openDM(f.name);
-  const more = document.createElement('button'); more.className = 'icon-btn'; more.title = 'More'; more.textContent = '⋯';
-  acts.append(msg, more);
+  const rm = document.createElement('button'); rm.className = 'icon-btn'; rm.title = 'Remove friend'; rm.textContent = '✕'; rm.onclick = () => removeFriend(f.rowId, f.name);
+  acts.append(msg, rm);
   r.append(wrap, info, acts);
   return r;
+}
+function requestRow(f, first) {
+  const r = friendRow(f, first);
+  r.dataset.group = 'pending';
+  const fs = r.querySelector('.fsub'); if (fs) fs.textContent = 'wants to be friends';
+  const acts = r.querySelector('.acts');
+  acts.innerHTML = '';
+  const ok = document.createElement('button'); ok.className = 'icon-btn primary'; ok.title = 'Accept'; ok.textContent = '✓'; ok.onclick = () => acceptFriend(f.rowId);
+  const no = document.createElement('button'); no.className = 'icon-btn'; no.title = 'Decline'; no.textContent = '✕'; no.onclick = () => declineFriend(f.rowId);
+  acts.append(ok, no);
+  return r;
+}
+function sentRow(f) {
+  const r = friendRow(f, false);
+  r.dataset.group = 'all';
+  const fs = r.querySelector('.fsub'); if (fs) { fs.innerHTML = ''; fs.appendChild(Object.assign(document.createElement('span'), { textContent: 'request sent — ' })); const req = document.createElement('span'); req.className = 'req-sub'; req.textContent = 'waiting'; fs.appendChild(req); }
+  const acts = r.querySelector('.acts');
+  acts.innerHTML = '';
+  const cx = document.createElement('button'); cx.className = 'icon-btn'; cx.title = 'Cancel request'; cx.textContent = '✕'; cx.onclick = () => cancelRequest(f.rowId, f.name);
+  acts.appendChild(cx);
+  return r;
+}
+async function acceptFriend(rowId) {
+  try {
+    const { error } = await supa.from('friendships').update({ status: 'accepted' }).eq('id', rowId);
+    if (error) throw error;
+    await refreshFriends();
+  } catch (err) { dbToast('Accept failed: ' + (err.message || err)); }
+}
+async function declineFriend(rowId) {
+  try {
+    const { error } = await supa.from('friendships').delete().eq('id', rowId);
+    if (error) throw error;
+    await refreshFriends();
+  } catch (err) { dbToast('Decline failed: ' + (err.message || err)); }
+}
+async function cancelRequest(rowId, name) {
+  try {
+    const { error } = await supa.from('friendships').delete().eq('id', rowId);
+    if (error) throw error;
+    await refreshFriends();
+  } catch (err) { dbToast('Cancel failed: ' + (err.message || err)); }
+}
+async function removeFriend(rowId, name) {
+  if (!confirm('Remove ' + name + ' from friends?')) return;
+  try {
+    const { error } = await supa.from('friendships').delete().eq('id', rowId);
+    if (error) throw error;
+    await refreshFriends();
+  } catch (err) { dbToast('Remove failed: ' + (err.message || err)); }
+}
+async function unblockUser(rowId) {
+  try {
+    const { error } = await supa.from('friendships').delete().eq('id', rowId);
+    if (error) throw error;
+    await refreshFriends();
+  } catch (err) { dbToast('Unblock failed: ' + (err.message || err)); }
 }
 function renderMembers() {
   const box = document.getElementById('members-list');
@@ -576,13 +976,13 @@ function renderMembers() {
   const h = document.createElement('h4');
   h.textContent = srv ? ('MEMBERS — ' + srv.members.length) : 'NO SERVER';
   box.appendChild(h);
-  (srv ? srv.members : []).forEach(nm => {
+  (srv ? srv.members : []).forEach(mb => {
     const m = document.createElement('div'); m.className = 'member';
     const wrap = document.createElement('div'); wrap.className = 'wrap';
-    const av = document.createElement('div'); av.className = 'ava'; av.style.background = colorFor(nm); av.textContent = (nm[0] || '?').toUpperCase();
-    const st = document.createElement('div'); st.className = 'status ' + (nm === displayName() ? 'on' : 'off');
+    const av = document.createElement('div'); av.className = 'ava'; av.style.background = mb.color || colorFor(mb.username); av.textContent = (mb.username[0] || '?').toUpperCase();
+    const st = document.createElement('div'); st.className = 'status ' + (mb.id === meId() ? 'on' : (mb.status === 'online' ? 'on' : 'off'));
     wrap.append(av, st);
-    const sp = document.createElement('span'); sp.textContent = nm;
+    const sp = document.createElement('span'); sp.textContent = mb.username + (srv.owner_id === mb.id ? ' 👑' : '');
     m.append(wrap, sp);
     box.appendChild(m);
   });
@@ -654,85 +1054,170 @@ function paintServerHeader() {
 }
 
 /* ===== Navigation (store-backed) ===== */
-function switchServerById(id) {
+async function switchServerById(id) {
   if (!guardAuth()) return;
   const s = store.servers.find(x => x.id === id);
   if (!s) return;
   currentServerId = id;
-  currentChannel = s.channels[0] || 'general';
+  currentChannel = (s.channels[0] && s.channels[0].name) || 'general';
   currentDM = null;
   saveStore(); renderAll();
-  setScope('server'); showView('chat'); renderChat();
+  setScope('server'); showView('chat');
+  paintServerHeader();
+  document.getElementById('msgs').innerHTML = '<div class="empty"><div class="empty-s">Loading messages…</div></div>';
+  await cloudLoadChannelMsgs();
+  renderChat();
+  const ch = activeChannel();
+  if (ch && ch.id) subLive('channel_id=eq.' + ch.id, srvKey(id, ch.name));
+  else unsubLive();
 }
 function switchServer(el, name) {
   if (!guardAuth()) return;
   const s = store.servers.find(x => x.id === name) || store.servers.find(x => x.name === name);
   if (s) switchServerById(s.id);
 }
-function switchChannelByName(name) {
+async function switchChannelByName(name) {
   if (!guardAuth()) return;
   currentChannel = name;
   currentDM = null;
   saveStore(); renderAll();
-  setScope('server'); showView('chat'); renderChat();
+  setScope('server'); showView('chat');
+  paintServerHeader();
+  document.getElementById('msgs').innerHTML = '<div class="empty"><div class="empty-s">Loading messages…</div></div>';
+  await cloudLoadChannelMsgs();
+  renderChat();
+  const srv = activeServer();
+  const ch = activeChannel();
+  if (srv && ch && ch.id) subLive('channel_id=eq.' + ch.id, srvKey(srv.id, ch.name));
+  else unsubLive();
 }
 function switchChannel(el, name) { switchChannelByName(name); }
-function createServer() {
+async function createServer() {
   if (!guardAuth()) return;
   const name = (prompt('Server name:') || '').trim().slice(0, 32);
   if (!name) return;
-  const s = { id: uid('srv'), name, channels: ['general'], members: [displayName()] };
-  store.servers.push(s);
-  store.msgs[srvKey(s.id, 'general')] = [];
-  saveStore();
-  switchServerById(s.id);
+  try {
+    const { data: srv, error: e1 } = await supa.from('servers').insert({ name, owner_id: meId() }).select('id,name').single();
+    if (e1) throw e1;
+    const { error: e2 } = await supa.from('server_members').insert({ server_id: srv.id, user_id: meId() });
+    if (e2) throw e2;
+    const { error: e3 } = await supa.from('channels').insert({ server_id: srv.id, name: 'general', position: 0 });
+    if (e3) throw e3;
+    await cloudLoadServers();
+    await switchServerById(srv.id);
+  } catch (err) {
+    if (!dbMissing(err)) dbToast('Could not create server: ' + (err.message || err));
+  }
 }
-function addChannel() {
+async function addChannel() {
   if (!guardAuth()) return;
   const srv = activeServer();
   if (!srv) return;
   const name = (prompt('Channel name:') || '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24);
-  if (!name || srv.channels.includes(name)) return;
-  srv.channels.push(name);
-  store.msgs[srvKey(srv.id, name)] = [];
-  saveStore();
-  switchChannelByName(name);
+  if (!name) return;
+  if (srv.channels.find(c => c.name === name)) { switchChannelByName(name); return; }
+  try {
+    const { error } = await supa.from('channels').insert({ server_id: srv.id, name, position: srv.channels.length });
+    if (error) throw error;
+    await cloudLoadServers();
+    await switchChannelByName(name);
+  } catch (err) {
+    if (!dbMissing(err)) dbToast('Could not add channel: ' + (err.message || err));
+  }
 }
-function openDM(name) {
+async function openDM(name) {
   if (!guardAuth()) return;
-  const d = ensureDM(name);
-  d.unread = 0;
-  currentDM = d.name;
-  saveStore(); renderAll();
-  setScope('home');
-  document.getElementById('nav-friends').classList.remove('active');
-  showView('chat'); renderChat();
-  document.getElementById('input').focus();
+  // Bot is local-only.
+  if (name === BOT_NAME) {
+    const b = store.dms.find(d => d.bot);
+    if (!b) return;
+    setUnread(b, 0);
+    currentDM = BOT_NAME;
+    saveStore(); renderAll();
+    setScope('home');
+    document.getElementById('nav-friends').classList.remove('active');
+    showView('chat'); renderChat();
+    document.getElementById('input').focus();
+    return;
+  }
+  // Real user → resolve profile, find or create the 1:1 conversation.
+  let d = store.dms.find(x => !x.bot && x.name.toLowerCase() === String(name).toLowerCase());
+  let peerId = d && d.peerId;
+  if (!peerId) {
+    const prof = await lookupProfile(name);
+    if (!prof) { dbToast('No user named "' + name + '".'); return; }
+    if (prof.id === meId()) { dbToast('That is you 🙂'); return; }
+    peerId = prof.id;
+    cacheProfiles([prof]);
+  }
+  try {
+    const cid = await findOrCreateConvo(peerId);
+    await cloudLoadDMs();
+    d = store.dms.find(x => x.convoId === cid) || store.dms.find(x => !x.bot && x.name.toLowerCase() === String(name).toLowerCase());
+    if (!d) throw new Error('DM not found after reload.');
+    setUnread(d, 0);
+    currentDM = d.name;
+    saveStore(); renderAll();
+    setScope('home');
+    document.getElementById('nav-friends').classList.remove('active');
+    showView('chat');
+    paintDMHeader(d.name, false);
+    document.getElementById('msgs').innerHTML = '<div class="empty"><div class="empty-s">Loading messages…</div></div>';
+    await cloudLoadConvoMsgs(d);
+    renderChat();
+    subLive('conversation_id=eq.' + d.convoId, dmKey(d.name), () => {
+      setUnread(d, getUnread(d) + 1);
+      renderDMs();
+    });
+    document.getElementById('input').focus();
+  } catch (err) {
+    if (!dbMissing(err)) dbToast('Could not open DM: ' + (err.message || err));
+  }
 }
 function renderDM() { if (store) renderChat(); }
-function send() {
+async function send() {
   if (!currentUser) { document.getElementById('auth-overlay').style.display = 'flex'; return; }
   if (!store) loadStore();
   if (document.getElementById('view-friends').style.display !== 'none') return;
   const inp = document.getElementById('input');
-  const text = inp.value.trim();
+  const text = inp.value.trim().slice(0, 2000);
   if (!text) return;
   if (currentDM) {
-    const k = dmKey(currentDM);
-    store.msgs[k] = store.msgs[k] || [];
-    store.msgs[k].push({ from: 'You', text, time: nowStamp() });
-    saveStore(); renderChat();
+    if (currentDM === BOT_NAME) {
+      const k = dmKey(BOT_NAME);
+      store.msgs[k] = store.msgs[k] || [];
+      store.msgs[k].push({ from: 'You', text, time: nowStamp() });
+      saveStore(); renderChat();
+      inp.value = '';
+      botRespond(text);
+      return;
+    }
+    const d = store.dms.find(x => x.name === currentDM && x.convoId);
+    if (!d) return;
     inp.value = '';
-    if (currentDM === BOT_NAME) botRespond(text);
-    else renderDMs();
+    try {
+      const { data, error } = await supa.from('messages').insert({ author_id: meId(), conversation_id: d.convoId, body: text }).select('id,created_at').single();
+      if (error) throw error;
+      pushMsg(dmKey(d.name), { id: data.id, from: 'You', text, time: fmtTime(data.created_at) });
+      renderChat();
+    } catch (err) {
+      inp.value = text;
+      if (!dbMissing(err)) dbToast('Send failed: ' + (err.message || err));
+    }
   } else {
     const srv = activeServer();
-    if (!srv) return;
-    const k = srvKey(srv.id, currentChannel);
-    store.msgs[k] = store.msgs[k] || [];
-    store.msgs[k].push({ from: 'You', text, time: nowStamp() });
-    saveStore(); renderChat();
+    const ch = activeChannel();
+    if (!srv || !ch || !ch.id) return;
     inp.value = '';
+    try {
+      const { data, error } = await supa.from('messages').insert({ author_id: meId(), channel_id: ch.id, body: text }).select('id,created_at').single();
+      if (error) throw error;
+      pushMsg(srvKey(srv.id, ch.name), { id: data.id, from: 'You', text, time: fmtTime(data.created_at) });
+      renderChat();
+    } catch (err) {
+      inp.value = text;
+      if (!dbMissing(err)) dbToast('Send failed: ' + (err.message || err));
+    }
   }
 }
 
@@ -743,8 +1228,8 @@ function botReply(userText) {
   const has = (...ws) => ws.some(w => t.includes(w));
   if (has('help', 'commands', 'what can you')) return 'Here is what you can test with me:\n• Just chat — I echo everything back\n• "who are you" — about me\n• "server" — how servers work\n• "ping" — latency check';
   if (has('ping')) return 'pong 🏓 — messaging works, delay was ~instant.';
-  if (has('who are you', 'your name', 'what are you')) return 'I\'m ' + BOT_NAME + ' 🤖, the built-in test buddy. I live in your browser (no backend) so you can test sending, replies, unread badges and history.';
-  if (has('server')) return 'Servers are per-account here: press + in the left rail, name it, and you get a #general channel. New accounts start with zero servers — go make one!';
+  if (has('who are you', 'your name', 'what are you')) return 'I\'m ' + BOT_NAME + ' 🤖, the built-in test buddy. I live in your browser while real messages are saved in Supabase — message me to test sending, replies, unread badges and history.';
+  if (has('server')) return 'Servers are saved and shared: press + in the left rail, name it, and you get a #general channel. New accounts start with zero servers — go make one!';
   if (has('friend')) return 'Friends start empty too. Hit "+ Add Friend" in the Friends tab, then message them from the 💬 button.';
   if (has('username', 'my name')) return 'Your username is "' + displayName() + '". It was picked at sign-in and shown bottom-left.';
   if (has('thank', 'thanks', 'thx')) return 'Anytime! That reply proves incoming messages render fine. ✅';
@@ -781,8 +1266,8 @@ function botRespond(userText) {
     if (currentDM === BOT_NAME && document.getElementById('view-friends').style.display === 'none') renderChat();
     else {
       const d = store.dms.find(x => x.name === BOT_NAME);
-      if (d) d.unread = (d.unread || 0) + 1;
-      saveStore(); renderDMs();
+      if (d) setUnread(d, getUnread(d) + 1);
+      renderDMs();
     }
   }, delay);
 }
@@ -791,6 +1276,7 @@ function botRespond(userText) {
 function showFriends() {
   if (currentUser && !store) loadStore();
   currentDM = null;
+  unsubLive();
   if (store) { saveStore(); renderAll(); }
   else { clearRail(); clearServerActive(); clearDMActive(); document.getElementById('rail-home').classList.add('active'); }
   document.getElementById('nav-friends').classList.add('active');
@@ -833,15 +1319,26 @@ function searchFriends() {
   const group = !active ? 'all' : active.textContent.toLowerCase();
   filterFriends(group === 'online' ? 'online' : group, active || document.querySelector('#ftabs button'));
 }
-function addFriend() {
+async function addFriend() {
   if (!guardAuth()) return;
-  const raw = prompt('Friend username:');
+  const raw = prompt('Friend username (exact):');
   if (!raw) return;
   const name = raw.trim().slice(0, 20);
   if (!name) return;
-  if (store.friends.find(f => f.name.toLowerCase() === name.toLowerCase())) { alert(name + ' is already your friend.'); return; }
-  store.friends.push({ name, group: 'all', status: 'off', sub: 'offline', color: colorFor(name) });
-  saveStore(); renderFriends();
+  const prof = await lookupProfile(name);
+  if (!prof) { dbToast('No user named "' + name + '". Ask for their exact username.'); return; }
+  if (prof.id === meId()) { dbToast('That is you 🙂'); return; }
+  const known = [...store.friends, ...store.pendingIn, ...store.pendingOut, ...store.blocked]
+    .find(f => f.peerId === prof.id);
+  if (known) { dbToast(prof.username + ' is already in your list.'); return; }
+  try {
+    const { error } = await supa.from('friendships').insert({ requester_id: meId(), addressee_id: prof.id, status: 'pending' });
+    if (error) throw error;
+    dbToast('Friend request sent to ' + prof.username + ' ✅', true);
+    await refreshFriends();
+  } catch (err) {
+    if (!dbMissing(err)) dbToast('Request failed: ' + (err.message || err));
+  }
 }
 function addDM() {
   if (!guardAuth()) return;
@@ -849,8 +1346,6 @@ function addDM() {
   if (!raw) return;
   const name = raw.trim().slice(0, 20);
   if (!name) return;
-  ensureDM(name);
-  saveStore();
   openDM(name);
 }
 
@@ -1046,17 +1541,13 @@ function setUser(user) {
   } else if (upick) {
     upick.style.display = 'none';
   }
-  // Bootstrap this account's (empty-by-default) workspace once per login.
+  // Bootstrap this account's workspace once per login (fast local shell, then cloud).
   if (bootedFor !== user.id) {
     bootedFor = user.id;
     loadStore();
     renderAll();
-    if (store.servers.length) {
-      const target = store.servers.find(s => s.id === currentServerId) || store.servers[0];
-      switchServerById(target.id);
-    } else {
-      showFriends();
-    }
+    showFriends();
+    bootCloud();
   }
 }
 async function saveUsername(e) {
@@ -1080,8 +1571,17 @@ async function saveUsername(e) {
   try {
     const { data, error } = await supa.auth.updateUser({ data: { username: name } });
     if (error) throw error;
+    // Keep the public profiles row in sync (usernames are unique there).
+    const { error: pErr } = await supa.from('profiles').update({ username: name }).eq('id', currentUser.id);
+    if (pErr) {
+      if (String(pErr.code) === '23505' || /duplicate|unique/i.test(pErr.message || '')) {
+        throw new Error('That username is taken — pick another.');
+      }
+      throw pErr;
+    }
     const user = (data && data.user) || (await supa.auth.getUser()).data.user;
     if (user) currentUser = user;
+    if (currentUser) profCache[currentUser.id] = Object.assign(profCache[currentUser.id] || {}, { username: name });
     setUser(currentUser);
     document.getElementById('username-overlay').style.display = 'none';
     if (store) { renderAll(); }
@@ -1094,7 +1594,9 @@ async function saveUsername(e) {
   }
 }
 async function logout() {
+  try { if (supa && currentUser) await supa.from('profiles').update({ status: 'offline' }).eq('id', currentUser.id); } catch (e) {}
   try { if (supa) await supa.auth.signOut(); } catch(e) {}
+  unsubLive();
   const upick = document.getElementById('username-overlay');
   if (upick) upick.style.display = 'none';
   setUser(null);
